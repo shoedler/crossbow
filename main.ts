@@ -1,7 +1,7 @@
-import { CrossbowView, CrossbowViewType } from 'crossbowView';
+import { CrossbowView, CrossbowViewType } from 'view';
 import { addCrossbowIcons } from 'icons';
-import { App, CachedMetadata, CacheItem, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, HeadingCache, Vault, TagCache, MetadataCache } from 'obsidian';
-import { stripMarkdown, StripMarkdownOptions } from 'stripMarkdown';
+import { App, CacheItem, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, HeadingCache, Vault, TagCache, MetadataCache, Pos, EditorPosition } from 'obsidian';
+import { stripMarkdown } from 'stripMarkdown';
 
 // Remember to rename these classes and interfaces!
 
@@ -15,25 +15,17 @@ const DEFAULT_SETTINGS: CrossbowPluginSettings = {
 	suggestReferencesInSameFile: false
 }
 
-export type CrossbowCacheEntity = { item?: CacheItem, file: TFile }
+export interface CrossbowCacheEntity {
+	file: TFile;
+	item?: CacheItem;
+	text: string;
+}
+
 export type CrossbowCacheLookup = { [key: string]: CrossbowCacheEntity }
 export type CrossbowMatchResult = {
 	word: string,
-	wordCount: number,
+	occurrences: EditorPosition[],
 	matches: CrossbowCacheEntity[]
-}
-
-export const getCrossbowCacheEntityName = (entity: CrossbowCacheEntity): string => {
-	if (!entity.item)
-		return entity.file.basename;
-	else if ('heading' in entity.item!)
-		return (entity.item as HeadingCache).heading;
-	else if ('tag' in entity.item!)
-		return (entity.item as TagCache).tag;
-	else {
-		console.log(entity);
-		throw new Error(`Unknown cache item type`)
-	}
 }
 
 export default class CrossbowPlugin extends Plugin {
@@ -44,8 +36,7 @@ export default class CrossbowPlugin extends Plugin {
 	private get keys(): string[] { return Object.keys(this.cache) }
 
 	private add = (entity: CrossbowCacheEntity): void => {
-		const name = getCrossbowCacheEntityName(entity);
-		this.cache[name] = entity;
+		this.cache[entity.text] = entity;
 	}
 
 	private getCrossbowCacheMatchesForWord = (query: string, source: TFile): CrossbowCacheEntity[] => {
@@ -71,30 +62,50 @@ export default class CrossbowPlugin extends Plugin {
 	}
 
 	private getCrossbowCacheMatchesForEditor = (editor: Editor, view: MarkdownView): CrossbowMatchResult[] => {
-		const md = editor.getValue();
-		const plainText = stripMarkdown(md)
+		const plainText = editor.getValue();
 
-		const wordLookup: { [key: string]: number } = {}
-		plainText
-			.split(/\s+/)
-			.filter(w => w.length > 0)
-			.filter(w => !w.startsWith('[[') && !w.endsWith(']]'))
+		// 1.
+		// Split the plain text into word-objects, which contain the word and its position in the editor
+		const words: { word: string, pos: EditorPosition }[] = []
+		for (let i = 0; i < plainText.length; i++) {
+			if (plainText[i].match(/\s/)) 
+				continue
+			else {
+				let word = ''
+				let pos = editor.offsetToPos(i)
+
+				while (plainText[i] && !plainText[i].match(/\s/)) 
+					word += plainText[i++]
+
+				words.push({ word, pos })
+			}
+		}
+
+		// 2.
+		// Create a lookup table for the words, where the key is the word and the value is an array of positions (occurrences of the word)
+		const wordLookup: { [key: string]: EditorPosition[] } = {}
+		words
+			.filter(w => w.word.length > 0)
+			.map(w => { return { word: stripMarkdown(w.word), pos: w.pos } })
+			.filter(w => !w.word.startsWith('[[') && !w.word.endsWith(']]'))
 			.forEach(w => {
-				if (w in wordLookup)
-					wordLookup[w]++
+				if (w.word in wordLookup)
+					wordLookup[w.word].push(w.pos)
 				else
-					wordLookup[w] = 1
+					wordLookup[w.word] = [w.pos]
 			})
 
+			
+		// 3.
+		// For each word, find matches from linkable items in the cache and add them to the result
 		const result: CrossbowMatchResult[] = []
-
 		Object.entries(wordLookup).forEach(entry => {
-			const [word, wordCount] = entry
+			const [word, occurrences] = entry
 			const matches = this.getCrossbowCacheMatchesForWord(word, view.file)
 			if (matches.length > 0) {
 				result.push({
 					word,
-					wordCount,
+					occurrences,
 					matches: matches
 				})
 			}
@@ -109,13 +120,13 @@ export default class CrossbowPlugin extends Plugin {
 		files.forEach((file) => {
 			const metadata = app.metadataCache.getFileCache(file);
 		
-			this.add({file});
+			this.add({ file, text: file.basename });
 		
 			if (metadata) {
 				if (metadata.headings) 
-					metadata.headings.forEach((heading) => this.add({ item: heading, file }));
+					metadata.headings.forEach((heading) => this.add({ item: heading, file, text: heading.heading }));
 				if (metadata.tags) 
-					metadata.tags.forEach((tag) => this.add({ item: tag, file }));
+					metadata.tags.forEach((tag) => this.add({ item: tag, file, text: tag.tag }));
 			}
 		});
 	}
