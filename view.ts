@@ -1,10 +1,7 @@
-import { CrossbowMatchResult, CrossbowPluginSettings } from 'main';
+import CrossbowPlugin, { CrossbowMatchResult, CrossbowPluginSettings } from 'main';
 import {
-  Editor,
-  EditorSelectionOrCaret,
+  EditorPosition,
   ItemView,
-  MarkdownView,
-  Notice,
   setIcon,
   WorkspaceLeaf,
 } from 'obsidian';
@@ -12,11 +9,11 @@ import {
 export const CrossbowViewType = 'crossbow-toolbar';
 
 export class CrossbowView extends ItemView {
-  private readonly settings: CrossbowPluginSettings;
+  private readonly crossbow: CrossbowPlugin
 
-  constructor(leaf: WorkspaceLeaf, settings: CrossbowPluginSettings) {
+  constructor(leaf: WorkspaceLeaf, crossbow: CrossbowPlugin) {
     super(leaf);
-    this.settings = settings;
+    this.crossbow = crossbow;
   }
 
   public getViewType(): string {
@@ -42,14 +39,6 @@ export class CrossbowView extends ItemView {
     this.draw();
   };
 
-  private getActiveEditor = (): Editor => {
-    const leaf = this.app.workspace.getMostRecentLeaf();
-    if (leaf?.view instanceof MarkdownView)
-      return leaf.view.editor;
-    else
-      throw new Error('Crossbow: Unable to determine current editor.');
-  }
-
   private truncate = (text: string, length: number = 20): string => {
     if (text.length > length)
       return text.substring(0, length - 3) + '...';
@@ -57,8 +46,10 @@ export class CrossbowView extends ItemView {
       return text;
   }
 
+  public clear = (): void => this.containerEl.empty();
+
   private readonly draw = (): void => {
-    this.containerEl.empty();
+    this.clear();
 
     const nav = this.containerEl.createDiv({ cls: 'nav-header' });
     const container = this.containerEl.createDiv({ cls: 'tag-container' });
@@ -66,72 +57,58 @@ export class CrossbowView extends ItemView {
     // Build nav header
     const navButtons = nav.createDiv({ cls: 'nav-buttons-container' });
     const navButton = navButtons.createDiv({ cls: 'clickable-icon nav-action-button', attr: { 'aria-label': 'Run Crossbow' } });
-    setIcon(navButton, 'crossbow');
-    navButton.addEventListener('click', () => console.warn("Not implemented yet.")); // TODO: Implement
+    setIcon(navButton, 'reset');
+    navButton.addEventListener('click', () => this.crossbow.runWithCacheUpdate());
 
     this.results.forEach(result => {
-      const treeItemDiv = container.createDiv({ cls: 'tree-item' });
-
-      const treeItemSelfDiv = treeItemDiv.createDiv({ cls: 'tree-item-self' });
-      const treeItemChildrenDiv = treeItemDiv.createDiv({ cls: 'tree-item-children' });
-
-      const treeItemInnerDiv = treeItemSelfDiv.createDiv({ cls: 'tree-item-inner' });
-      const treeItemInnerH = treeItemInnerDiv.createEl('h3');
-
-      treeItemInnerH.style.margin = '0px';
-      treeItemInnerH.innerText = result.word;
-
-      // Create location tags
-      // const treeItemInnerOccurrencesP = treeItemInnerDiv.createEl('p');
-      // treeItemInnerOccurrencesP.style.margin = '2px';
-      // treeItemInnerOccurrencesP.style.fontWeight = 'bold';
-      // treeItemInnerOccurrencesP.innerText = "Occurrences";
       result.occurrences.forEach(occurrence => {
-        const occurenceTagEl = treeItemInnerDiv.createEl('span');
+        const treeItemDiv = container.createDiv({ cls: 'tree-item' });
+  
+        const treeItemSelfDiv = treeItemDiv.createDiv({ cls: 'tree-item-self is-clickable' });
+        const treeItemChildrenDiv = treeItemDiv.createDiv({ cls: 'tree-item-children' });
+  
+        const treeItemInnerDiv = treeItemSelfDiv.createDiv({ cls: 'tree-item-inner' });
+        const treeItemFlairDiv = treeItemSelfDiv.createDiv({ cls: 'tree-item-flair-outer' });
+        const treeItemFlairSpan = treeItemFlairDiv.createEl('span', { cls: 'tree-item-flair' });
+        const treeItemInnerH = treeItemInnerDiv.createEl('h4');
+  
+        treeItemInnerH.style.margin = '0px';
+        treeItemInnerH.innerText = result.word;
+        treeItemFlairSpan.innerText = "L" + occurrence.line + ":" + occurrence.ch;
 
-        occurenceTagEl.style.backgroundColor = '#eaeaea';
-        occurenceTagEl.style.borderRadius = '5px';
-        occurenceTagEl.style.padding = '2px 5px';
-        occurenceTagEl.style.margin = '2px 5px';
-
-        occurenceTagEl.style.display = 'inline-block';
-        occurenceTagEl.style.cursor = 'pointer';
-
-        // Change color on hover
-        occurenceTagEl.addEventListener('mouseenter', () => {
-          occurenceTagEl.style.backgroundColor = '#d6d6d6';
+        treeItemInnerH.addEventListener('click', () => {
+          const occurrenceEnd = { ch: occurrence.ch + result.word.length, line: occurrence.line } as EditorPosition
+          this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd );
+          this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd}, true)
         });
 
-        occurenceTagEl.addEventListener('mouseleave', () => {
-          occurenceTagEl.style.backgroundColor = '#eaeaea';
-        });
+        // Create candidate tags
+        result.matches.forEach(match => {
+          const treeItemChildDiv = treeItemChildrenDiv.createDiv({ cls: 'tree-item' });
+          const treeItemChildSelfDiv = treeItemChildDiv.createDiv({ cls: 'tree-item-self is-clickable' });
+  
+          const treeItemChildInnerDiv = treeItemChildSelfDiv.createDiv({ cls: 'tree-item-inner' });
+          const treeItemChildFlairDiv = treeItemChildSelfDiv.createDiv({ cls: 'tree-item-flair-outer' });
+          const treeItemChildInnerSpan = treeItemChildInnerDiv.createEl('span');
+          const treeItemChildFlairSpan = treeItemChildFlairDiv.createEl('span', { cls: 'tree-item-flair' });
+  
+          treeItemChildInnerSpan.innerText = "🔗 " + match.text;
+          treeItemChildFlairSpan.innerText = `In File '${this.truncate(match.file.basename)}'`;
+  
+          treeItemChildSelfDiv.addEventListener('click', () => {
+            treeItemChildrenDiv.remove();
+            treeItemInnerH.style.textDecoration = 'line-through';
 
-        occurenceTagEl.innerText = "L" + occurrence.line + ":" + occurrence.ch;
-        occurenceTagEl.addEventListener('click', () => {
-          const editor = this.getActiveEditor();
-          editor.setSelection(occurrence, { ch: occurrence.ch + result.word.length, line: occurrence.line } );
-          editor.focus();
-        });
+            const occurrenceEnd = { ch: occurrence.ch + result.word.length, line: occurrence.line } as EditorPosition
+            const link = match.item ? 
+              this.app.fileManager.generateMarkdownLink(match.file, match.text, "#" + match.text, result.word) : 
+              this.app.fileManager.generateMarkdownLink(match.file, match.text, undefined, result.word);
+
+            this.crossbow.currentEditor.replaceRange(link, occurrence, occurrenceEnd);
+          })
+        })
       });
 
-      // Create candidate tags
-      // const treeItemInnerCandidatesP = treeItemInnerDiv.createEl('p');
-      // treeItemInnerCandidatesP.style.margin = '2px';
-      // treeItemInnerCandidatesP.style.fontWeight = 'bold';
-      // treeItemInnerCandidatesP.innerText = "Candidates";
-      result.matches.forEach(match => {
-        const treeItemChildDiv = treeItemChildrenDiv.createDiv({ cls: 'tree-item' });
-        const treeItemChildSelfDiv = treeItemChildDiv.createDiv({ cls: 'tree-item-self is-clickable' });
-
-        const treeItemChildInnerDiv = treeItemChildSelfDiv.createDiv({ cls: 'tree-item-inner' });
-        const treeItemChildFlairDiv = treeItemChildSelfDiv.createDiv({ cls: 'tree-item-flair-outer' });
-        const treeItemChildInnerSpan = treeItemChildInnerDiv.createEl('span');
-        const treeItemChildFlairSpan = treeItemChildFlairDiv.createEl('span', { cls: 'tree-item-flair' });
-
-        treeItemChildInnerSpan.innerText = match.text;
-        treeItemChildFlairSpan.innerText = `In File '${this.truncate(match.file.basename)}'`;
-
-      })
     })
   };
 }
