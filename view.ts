@@ -70,17 +70,31 @@ export class CrossbowView extends ItemView {
         const treeItemInnerDiv = treeItemSelfDiv.createDiv({ cls: 'tree-item-inner' });
         const treeItemFlairDiv = treeItemSelfDiv.createDiv({ cls: 'tree-item-flair-outer' });
         const treeItemFlairSpan = treeItemFlairDiv.createEl('span', { cls: 'tree-item-flair' });
-        const treeItemInnerH = treeItemInnerDiv.createEl('h4');
+        const treeItemInnerH = treeItemInnerDiv.createEl('h5');
   
         treeItemInnerH.style.margin = '0px';
         treeItemInnerH.innerText = result.word;
         treeItemFlairSpan.innerText = "L" + occurrence.line + ":" + occurrence.ch;
 
+        treeItemInnerH.addEventListener('dblclick', () => {
+          if (treeItemInnerH.getAttribute('clicked')) {
+            treeItemInnerH.removeAttribute('clicked');
+            treeItemChildrenDiv.style.display = 'none';
+            return;
+          }
+          else {
+            treeItemInnerH.setAttribute('clicked', 'true');
+            treeItemChildrenDiv.style.display = 'block';
+          }
+        });
+
         treeItemInnerH.addEventListener('click', () => {
           const occurrenceEnd = { ch: occurrence.ch + result.word.length, line: occurrence.line } as EditorPosition
-          this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd );
-          this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd}, true)
-        });
+          this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd);
+          this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd }, true)
+        })
+
+        treeItemChildrenDiv.style.display = 'none';
 
         // Create candidate tags
         result.matches.forEach(match => {

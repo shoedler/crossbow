@@ -27,6 +27,17 @@ export class CrossbowSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Ignore suggestions which start with a lowercase letter')
+			.setDesc('If checked, suggestions which start with a lowercase letter will be ignored')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter)
+				.onChange(async (value) => {
+					console.log('Toggle: ' + value);
+					this.plugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Suggest references in same file')
 			.setDesc('If checked, references (Headers, Tags) to items in the same file will be suggested')
 			.addToggle(toggle => toggle

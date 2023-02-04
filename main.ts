@@ -7,11 +7,13 @@ import './editorExtension';
 export interface CrossbowPluginSettings {
 	ignoredWords: string;
 	suggestReferencesInSameFile: boolean;
+	ignoreSuggestionsWhichStartWithLowercaseLetter: boolean;
 }
 
 const DEFAULT_SETTINGS: CrossbowPluginSettings = {
 	ignoredWords: 'image',
-	suggestReferencesInSameFile: false
+	suggestReferencesInSameFile: false,
+	ignoreSuggestionsWhichStartWithLowercaseLetter: true
 }
 
 export interface CrossbowCacheEntity {
@@ -43,6 +45,8 @@ export default class CrossbowPlugin extends Plugin {
 	private get keys(): string[] { return Object.keys(this.cache) }
 
 	private addOrUpdate = (entity: CrossbowCacheEntity): void => {
+		if (entity.text.length < 3)
+			console.table(entity);
 		this.cache[entity.text] = entity;
 	}
 	
@@ -56,14 +60,25 @@ export default class CrossbowPlugin extends Plugin {
 			const [word, occurrences] = entry
 			const matchSet: Set<CrossbowCacheEntity> = new Set()
 
+			// Filter
 			this.keys.forEach(key => {
+				// If reference is in the same file, and we don't want to suggest references in the same file, skip
 				if (!this.settings.suggestReferencesInSameFile && this.cache[key].file === this._currentFile)
 					return
+				// If the word is not a substring of the key or the key is not a substring of the word, skip
 				if ((key.toLowerCase().includes(word.toLowerCase()) || word.toLowerCase().includes(key.toLowerCase())) === false)
 					return
-				if ((1 / key.length * word.length) <= 0.1)
+				// If the lengths differ too much, skip
+				if ((1 / key.length * word.length) <= 0.2)
 					return
+				// If the word is too short, skip
 				if (word.length <= 3)
+					return;
+				// If the word is a link, skip
+				if (word.startsWith('[') || word.startsWith('![') || word.endsWith(']'))
+					return;
+				// If the word does not start with an uppercase letter, skip
+				if (this.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && (word.charCodeAt(0) === word.charAt(0).toLowerCase().charCodeAt(0)))
 					return;
 				matchSet.add(this.cache[key])
 			})		
@@ -103,7 +118,7 @@ export default class CrossbowPlugin extends Plugin {
 			this._currentFile = leaf.view.file;
 		}
     else
-      throw new Error('Crossbow: Unable to determine current editor.');
+			console.warn('🏹: Unable to determine current editor.');
   }
 
 	public runWithCacheUpdate = () => {
