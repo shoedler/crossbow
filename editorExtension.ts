@@ -1,52 +1,47 @@
+import { CrossbowSuggestion } from "main";
 import { Editor, EditorPosition } from "obsidian";
 import { stripMarkdown } from "stripMarkdown";
 
 declare module "obsidian" {
-	interface Editor {
-		getWordLookup(ignoredWords: string[]): { [key: string]: EditorPosition[] }
-	}
+  interface Editor {
+    getWordLookup(): { [key: string]: EditorPosition[] }
+    matches: CrossbowSuggestion[];
+  }
 }
 
-Editor.prototype.getWordLookup = function (ignoredWords: string[]): { [key: string]: EditorPosition[] } {
-	const plainText = this.getValue();
+Editor.prototype.matches = [];
 
-	// Split the plain text into word-objects, which contain the word and its position in the editor
-	const words: { word: string, pos: EditorPosition }[] = []
-	for (let i = 0; i < plainText.length; i++) {
-		if (plainText[i].match(/\s/)) 
-			continue
-		else {
-			let word = ''
-			let pos = this.offsetToPos(i)
+Editor.prototype.getWordLookup = function (): { [key: string]: EditorPosition[] } {
+  const plainText = this.getValue();
 
-			while (plainText[i] && !plainText[i].match(/\s/)) 
-				word += plainText[i++]
+  // Split the plain text into word-objects, which contain the word and its position in the editor
+  const words: { word: string, pos: EditorPosition }[] = []
+  for (let i = 0; i < plainText.length; i++) {
+    if (plainText[i].match(/\s/))
+      continue;
+    else {
+      let word = '';
+      let pos = this.offsetToPos(i);
 
-			words.push({ word, pos })
-		}
-	}
+      while (plainText[i] && !plainText[i].match(/\s/)) 
+        word += plainText[i++];
 
-	// Create a lookup table for the words, where the key is the word and the value is an array of positions (occurrences of the word)
-	const wordLookup: { [key: string]: EditorPosition[] } = {}
-	words
-		.filter(w => {
-			if (w.word.length <= 0) return false
-			if (w.word.startsWith('[[') && w.word.endsWith(']]')) return false
-			if (w.word.startsWith('#')) return false
-			if (ignoredWords.includes(w.word)) return false
-			
-			return true
-		})
-		.forEach(w => {
-			const word = stripMarkdown(w.word)
+      words.push({ word, pos });
+    }
+  }
 
-			if (word in wordLookup)
-				wordLookup[word].push(w.pos)
-			else
-				wordLookup[word] = [w.pos]
-		})
+  // Create a lookup table for the words, where the key is the word and the value is an array of positions (occurrences of the word)
+  const wordLookup: { [key: string]: EditorPosition[] } = {}
+  words.forEach(w => {
+    const word = stripMarkdown(w.word)
 
-	return wordLookup
+    if (word in wordLookup)
+      wordLookup[word].push(w.pos)
+    else
+      wordLookup[word] = [w.pos]
+  })
+
+  return wordLookup;
 }
 
 // Export

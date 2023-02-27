@@ -1,51 +1,58 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import CrossbowPlugin from './main';
+import CrossbowPlugin, { CrossbowPluginSettings } from './main';
 
 export class CrossbowSettingTab extends PluginSettingTab {
-	plugin: CrossbowPlugin;
+  plugin: CrossbowPlugin;
 
-	constructor(app: App, plugin: CrossbowPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
+  constructor(app: App, plugin: CrossbowPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-	display(): void {
-		const { containerEl } = this;
+  display(): void {
+    const { containerEl } = this;
 
-		containerEl.empty();
-		containerEl.createEl('h2', { text: 'Crossbow Settings 🏹' });
+    containerEl.empty();
+    containerEl.createEl('h2', { text: 'Crossbow Settings 🏹' });
 
-		new Setting(containerEl)
-			.setName('Ignored Words')
-			.setDesc('A list of words (case-sensitive) to ignore when searching for linkables. (Comma separated)')
-			.addText(text => text
-				.setPlaceholder("the,always,some")
-				.setValue(this.plugin.settings.ignoredWords)
-				.onChange(async (value) => {
-					this.plugin.settings.ignoredWords = value;
-					await this.plugin.saveSettings();
-				}));
+    new Setting(containerEl)
+      .setName('Ignored Words')
+      .setDesc('A case-sensitive, comma separated, whitespace-ignodre list of words to ignore when searching for linkables.')
+      .addText(text => text
+        .setPlaceholder(this.plugin.settings.ignoredWords.join(", "))
+        .setValue(this.plugin.settings.ignoredWords.join(", "))
+        .onChange(async value => this.updateSettingValue('ignoredWords', value.split(",").map(word => word.trim()))));
 
-		new Setting(containerEl)
-			.setName('Ignore suggestions which start with a lowercase letter')
-			.setDesc('If checked, suggestions which start with a lowercase letter will be ignored')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter)
-				.onChange(async (value) => {
-					console.log('Toggle: ' + value);
-					this.plugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter = value;
-					await this.plugin.saveSettings();
-				}));
+    new Setting(containerEl)
+      .setName('Ignore suggestions which start with a lowercase letter')
+      .setDesc('If checked, suggestions which start with a lowercase letter will be ignored')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter)
+        .onChange(async value => this.updateSettingValue('ignoreSuggestionsWhichStartWithLowercaseLetter', value)));
 
-		new Setting(containerEl)
-			.setName('Suggest references in same file')
-			.setDesc('If checked, references (Headers, Tags) to items in the same file will be suggested')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.suggestReferencesInSameFile)
-				.onChange(async (value) => {
-					console.log('Toggle: ' + value);
-					this.plugin.settings.suggestReferencesInSameFile = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+    new Setting(containerEl)
+      .setName('Suggest references in same file')
+      .setDesc('If checked, references (Headers, Tags) to items in the same file will be suggested')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.suggestReferencesInSameFile)
+        .onChange(async value => this.updateSettingValue('suggestReferencesInSameFile', value)));
+
+    new Setting(containerEl)
+      .setName('Minimum word length of suggestions')
+      .setDesc('Defines the min. length a cached word must have for it to be considered a suggestion')
+      .addText(text => text
+        .setValue(this.plugin.settings.suggestedReferencesMinimumWordLength.toString())
+        .onChange(async value => {
+          if (!/^\s*\d+\s*$/.test(value)) 
+            console.error(`Cannot set "suggestedReferencesMinimumWordLength" to NaN. Must be integer`);
+          else 
+            this.updateSettingValue('suggestedReferencesMinimumWordLength', parseInt(value, 10));
+        }));
+  }
+
+  private updateSettingValue = async <K extends keyof CrossbowPluginSettings>(key: K, value: CrossbowPluginSettings[K]) => {
+    this.plugin.settings[key] = value;
+    await this.plugin.saveSettings();
+    this.plugin.runWithCacheUpdate();
+  }
 }
