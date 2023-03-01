@@ -1,7 +1,7 @@
 # 🏹 Crossbow
 
 Crossbow is a plugin for [Obsidian](https://obsidian.md).
-Its purpose is to provide crossreference suggestions on Notes that you've written.
+Its purpose is to provide crossreference suggestions based on the notes in your vault.
 With that, your knowledge graph will gain some desperatly needed edges - it'll become more meaningful and interconnected.
 
 ## How to use
@@ -28,8 +28,8 @@ By clicking on a suggestion within the entry, crossbow will insert a link with t
 
 ### Roadmap
 
-* [ ] General UX Improvement
-* [ ] Add Integration & Unit Tests
+* [x] General UX Improvement
+* [ ] Add "Goto Source" action on suggestions
 * [ ] Push to community plugin list
 
 ### Releasing new releases

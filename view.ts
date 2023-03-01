@@ -1,15 +1,16 @@
 import CrossbowPlugin, { CrossbowCacheMatch, CrossbowSuggestion } from 'main';
 import {
+  ButtonComponent,
   EditorPosition,
   ItemView,
   setIcon,
   WorkspaceLeaf,
 } from 'obsidian';
 
-export const CrossbowViewType = 'crossbow-toolbar';
-
 export class CrossbowView extends ItemView {
-  private readonly crossbow: CrossbowPlugin
+  private readonly crossbow: CrossbowPlugin;
+  private results: CrossbowSuggestion[];
+
   constructor(leaf: WorkspaceLeaf, crossbow: CrossbowPlugin) {
     CrossbowTreeItem.register();
     CrossbowTreeItemLeaf.register();
@@ -17,28 +18,38 @@ export class CrossbowView extends ItemView {
     super(leaf);
     this.crossbow = crossbow;
   }
+
+  public static viewType = 'crossbow-toolbar';
+
   public getViewType(): string {
-    return CrossbowViewType;
+    return CrossbowView.viewType;
   }
+
   public getDisplayText(): string {
     return 'Crossbow';
   }
+
   public getIcon(): string {
     return 'crossbow';
   }
+
   public load(): void {
     super.load();
     this.draw();
   }
-  private results: CrossbowSuggestion[];
+
   public updateResults = (results: CrossbowSuggestion[]): void => {
     this.results = results
     this.draw();
   };
 
-  private truncate = (text: string, length: number = 20): string => text.length > length ? text.substring(0, length - 3) + '...' : text;
-
   public clear = (): void => this.containerEl.empty();
+
+  private getRankEmoji = (rank: CrossbowCacheMatch['rank']): string => 
+    rank >= 8 ? '🏆' :
+    rank >= 5 ? '🥇' :
+    rank >= 2 ? '🥈' :
+    '🥉';
 
   private readonly draw = (): void => {
     this.clear();
@@ -52,50 +63,61 @@ export class CrossbowView extends ItemView {
     setIcon(navButton, 'reset');
     navButton.addEventListener('click', () => this.crossbow.runWithCacheUpdate());
 
+    // Build tree items
     if (this.results)
-      this.results.forEach(result => this.addResult(container, result));
+      this.results.forEach(result => this.addResultTreeItem(container, result));
   };
 
-  private getRankEmoji = (rank: CrossbowCacheMatch['rank']): string => rank >= 8 ? '🥇' :
-    rank >= 5 ? '🥈' :
-    rank >= 2 ? '🥉' :
-    '💩';
-
-  private addResult = (
-    container: HTMLDivElement, 
+  private addResultTreeItem = (
+    container: Readonly<HTMLDivElement>, 
     result: CrossbowSuggestion,
   ) => {
     const ranks = new Set<number>();
     result.matches.forEach(match => ranks.add(match.rank));
-    const availableMatchRanks = Array.from(ranks).sort().map(rank => this.getRankEmoji(rank as CrossbowCacheMatch['rank'])).join('');
+    const availableMatchRanks = Array.from(ranks).sort((a,b) => b - a).map(rank => this.getRankEmoji(rank as CrossbowCacheMatch['rank'])).join('');
 
-    const item = new CrossbowTreeItem(container, result.word, `${availableMatchRanks} ${result.occurrences.length.toString()}`)
-    result.occurrences.forEach(occurrence => this.addResultWordOccurrence(item.childrenWrapper, result.word, result.matches, occurrence));
+    const item = new CrossbowTreeItem(container, result.word);
+    item.addFlair(availableMatchRanks);
+    item.addTextSuffix(`(${result.occurrences.length.toString()})`);
+  
+    result.occurrences.forEach(occurrence => this.addResultWordOccurrenceTreeItem(item.getChildrenContainer(), result.word, result.matches, occurrence));
     return item;
   }
 
-  private addResultWordOccurrence = (
-    parent: HTMLDivElement,
+  private addResultWordOccurrenceTreeItem = (
+    parent: Readonly<HTMLDivElement>,
     resultWord: CrossbowSuggestion['word'],
     resultMatches: CrossbowSuggestion['matches'],
     occurrence: EditorPosition,
   ) => {
-    const item = new CrossbowTreeItem(parent, resultWord, `L${occurrence.line}:${occurrence.ch}`)
+    const item = new CrossbowTreeItem(parent, `On line ${occurrence.line}:${occurrence.ch}`);
     
-    // Scroll into View
-    item.mainWrapper.addEventListener('dblclick', () => {
+    // Scroll into view action
+    const scrollIntoView = () => {
       const occurrenceEnd = { ch: occurrence.ch + resultWord.length, line: occurrence.line } as EditorPosition
       this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd);
       this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd }, true)
-    })
+    }
+
+    // Can be invoked via flair button
+    item.addButton("Scroll into View", "lucide-scroll", (ev: MouseEvent) => {
+      scrollIntoView();
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+
+    // As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
+    item.addOnClick(() => {
+      if (!item.isCollapsed())
+        scrollIntoView();
+    });
 
     resultMatches.forEach(match => {
-      const child = new CrossbowTreeItemLeaf(item.childrenWrapper, /*🔗*/ `${this.getRankEmoji(match.rank)} ${match.text}`, `In File '${this.truncate(match.file.basename)}'`)
+      const childItem = new CrossbowTreeItemLeaf(item.getChildrenContainer(), `${this.getRankEmoji(match.rank)} ${match.text}`);
 
-      // Add backlink & remove
-      child.mainWrapper.addEventListener('dblclick', () => {
-        item.childrenWrapper.remove();
-        item.mainWrapper.style.textDecoration = 'line-through';
+      // Add backlink & remove action
+      childItem.addButton("Use", 'lucide-inspect', () => {
+        item.disable();
 
         const occurrenceEnd = { ch: occurrence.ch + resultWord.length, line: occurrence.line } as EditorPosition
         const link = match.item ? 
@@ -103,7 +125,12 @@ export class CrossbowView extends ItemView {
           this.app.fileManager.generateMarkdownLink(match.file, match.text, undefined, resultWord);
 
         this.crossbow.currentEditor.replaceRange(link, occurrence, occurrenceEnd);
-      })
+      });
+
+      // Go to source
+      childItem.addButton("Source", 'lucide-search', () => {
+        console.warn("🏹: Go To Source is not yet implemented");
+      });
     });
 
     return item;
@@ -111,39 +138,64 @@ export class CrossbowView extends ItemView {
 }
 
 class CrossbowTreeItemLeaf extends HTMLElement {
-  public readonly mainWrapper: HTMLDivElement;
-  private readonly flair: HTMLSpanElement;
+  protected readonly mainWrapper: HTMLDivElement;
   private readonly inner: HTMLDivElement; 
+  private readonly buttons: ButtonComponent[] = [];
 
-  constructor(parent: HTMLDivElement, text: string = "", flairText: string = "") {
+  constructor(parent: HTMLDivElement, text: string = "") {
     super();
 
     this.addClass("tree-item");
     this.mainWrapper = this.createDiv({ cls: 'tree-item-self is-clickable' });
 
-    this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner' });
-    const flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
-    this.flair = flairWrapper.createEl('span', { cls: 'tree-item-flair' });
+    this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
 
     parent.appendChild(this);
 
     this.setText(text);
-    this.setFlairText(flairText);
   }
 
-  public setFlairText = (text: string) => this.flair.innerText = text;
-
   public setText = (text: string) => this.inner.innerText = text;
+
+  public disable = () => {
+    this.mainWrapper.style.textDecoration = 'line-through';
+    this.buttons.forEach(button => button.disabled = true);
+  }
+
+  public addOnClick = (listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any) => {
+    this.mainWrapper.addEventListener('click', listener);
+  }
+
+  public addFlair = (text: string) => {
+    const flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
+    const flair = flairWrapper.createEl('span', { cls: 'tree-item-flair' });
+    flair.innerText = text;
+  }
+
+  public addTextSuffix = (text: string) => {
+    const textEl = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
+    textEl.innerText = text;
+  }
+
+  public addButton = (label: string, iconName:string, onclick: (this: HTMLDivElement, ev: MouseEvent) => any) => {
+    const button = new ButtonComponent(this.mainWrapper);
+    button.setTooltip(label);
+    button.setIcon(iconName);
+    button.setClass('tree-item-button');
+    button.onClick(onclick);
+
+    this.buttons.push(button);
+  }
 
   public static register = () => customElements.define("crossbow-tree-item-leaf", CrossbowTreeItemLeaf);
 }
 
 class CrossbowTreeItem extends CrossbowTreeItemLeaf {
-  public readonly childrenWrapper: HTMLDivElement;
-  public readonly iconWrapper: HTMLDivElement;
+  private readonly childrenWrapper: HTMLDivElement;
+  private readonly iconWrapper: HTMLDivElement;
 
-  constructor(parent: HTMLDivElement, text: string = "", flairText: string = "") {
-    super(parent, text, flairText);
+  public constructor(parent: HTMLDivElement, text: string = "") {
+    super(parent, text);
 
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
@@ -154,8 +206,7 @@ class CrossbowTreeItem extends CrossbowTreeItemLeaf {
 
     this.iconWrapper = document.createElement('div');
     this.iconWrapper.addClass('tree-item-icon', 'collapse-icon');
-    this.iconWrapper.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle">
+    this.iconWrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle">
       <path d="M3 8L12 17L21 8"></path>
     </svg>
     `;
@@ -163,17 +214,29 @@ class CrossbowTreeItem extends CrossbowTreeItemLeaf {
     this.appendChild(this.childrenWrapper);
     this.mainWrapper.prepend(this.iconWrapper);
 
-    // Collapse / Uncollapse
-    this.mainWrapper.addEventListener('click', () => {
-      if (this.hasClass("is-collapsed")) {
-        this.removeClass("is-collapsed");
-        this.childrenWrapper.style.display = "block";
-      }
-      else {
-        this.addClass("is-collapsed");
-        this.childrenWrapper.style.display = 'none';
-      }
-    });
+    // Collapse / Fold
+    this.mainWrapper.addEventListener('click', () => this.isCollapsed() ? this.expand() : this.collapse());
+  }
+
+  public getChildrenContainer = (): Readonly<HTMLDivElement> => {
+    return Object.freeze(this.childrenWrapper);
+  }
+
+  public disable = () => {
+    super.disable();
+    this.childrenWrapper.remove();
+  }
+
+  public isCollapsed = () => this.hasClass("is-collapsed");
+
+  public expand = () => {
+    this.removeClass("is-collapsed");
+    this.childrenWrapper.style.display = "block";
+  }
+
+  public collapse = () => {
+    this.addClass("is-collapsed");
+    this.childrenWrapper.style.display = 'none';
   }
 
   public static register = () => customElements.define("crossbow-tree-item", CrossbowTreeItem);

@@ -14,6 +14,6 @@ const crossbowIcon = {
   // `
 }
 
-export const addCrossbowIcons = () => {
+export const registerCrossbowIcons = () => {
   addIcon(crossbowIcon.name, crossbowIcon.svg)
 }

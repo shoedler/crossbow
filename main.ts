@@ -1,5 +1,5 @@
-import { CrossbowView, CrossbowViewType } from 'view';
-import { addCrossbowIcons } from 'icons';
+import { CrossbowView } from 'view';
+import { registerCrossbowIcons } from 'icons';
 import { CacheItem, Editor, MarkdownView, Plugin, TFile, EditorPosition, CachedMetadata } from 'obsidian';
 import { CrossbowSettingTab } from './settings';
 import './editorExtension';
@@ -102,11 +102,11 @@ export default class CrossbowPlugin extends Plugin {
         // Soft-filters:
         // If the lengths differ too much, add as not-very-good suggestion
         if ((1 / crossbowCacheKey.length * word.length) <= 0.2) {
-          matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: 2 });
+          matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: 1 });
           return;
         }
 
-        matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: 5 });
+        matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: 4 });
       })
   
       const matches = Array.from(matchSet);
@@ -123,9 +123,6 @@ export default class CrossbowPlugin extends Plugin {
     // The matches array on the editor needs to be some sort of controller which can observe changes.
     // On changes / new / delete we need to auto-magically update / add / remove tree-items in the view.
     // COMBAK
-
-    // Add a matchType Property to the match results. str === str should be highest classification, str.tolower() === str.tolower() second, etc.
-    // Visually mark the match quality
   }
 
   // 'cache' can be passed in, if this is called from an event handler which already has the cache
@@ -172,15 +169,12 @@ export default class CrossbowPlugin extends Plugin {
   public onload = async () => {
     await this.loadSettings();
 
-    addCrossbowIcons()
+    registerCrossbowIcons()
+    this.registerView(CrossbowView.viewType, leaf => (this.view = new CrossbowView(leaf, this)));
 
-    this.registerView(
-      CrossbowViewType,
-      (leaf) => (this.view = new CrossbowView(leaf, this)),
-    );
-
-    this.addRibbonIcon('crossbow', 'Crossbow', async (evt: MouseEvent) => {
-      const existing = this.app.workspace.getLeavesOfType(CrossbowViewType);
+    // Ribbon icon to access the crossbow pane
+    this.addRibbonIcon('crossbow', 'Crossbow', async (ev: MouseEvent) => {
+      const existing = this.app.workspace.getLeavesOfType(CrossbowView.viewType);
       
       if (existing.length) {
         this.app.workspace.revealLeaf(existing[0]);
@@ -188,14 +182,17 @@ export default class CrossbowPlugin extends Plugin {
       }
   
       await this.app.workspace.getRightLeaf(false).setViewState({
-        type: CrossbowViewType,
+        type: CrossbowView.viewType,
         active: true,
       });
   
       this.app.workspace.revealLeaf(
-        this.app.workspace.getLeavesOfType(CrossbowViewType)[0],
+        this.app.workspace.getLeavesOfType(CrossbowView.viewType)[0],
       );
     });
+
+    // Settings-tab to configure crossbow
+    this.addSettingTab(new CrossbowSettingTab(this.app, this));
 
     // Evenhandler for file-open events
     this.app.workspace.on('file-open', () => {
@@ -218,9 +215,6 @@ export default class CrossbowPlugin extends Plugin {
 
       this.runWithoutCacheUpdate()
     })
-
-    // SettingTab for crossbow 
-    this.addSettingTab(new CrossbowSettingTab(this.app, this));
 
     // Run initially
     while (!this.currentEditor) {
