@@ -3,17 +3,16 @@ import {
   ButtonComponent,
   EditorPosition,
   ItemView,
-  setIcon,
   WorkspaceLeaf,
 } from 'obsidian';
 
 export class CrossbowView extends ItemView {
   private readonly crossbow: CrossbowPlugin;
-  private results: CrossbowSuggestion[];
 
   constructor(leaf: WorkspaceLeaf, crossbow: CrossbowPlugin) {
-    CrossbowTreeItem.register();
-    CrossbowTreeItemLeaf.register();
+    CrossbowMatchTreeItemLeaf.register();
+    CrossbowOccurrenceTreeItem.register();
+    CrossbowSuggestionTreeItem.register();
 
     super(leaf);
     this.crossbow = crossbow;
@@ -35,114 +34,128 @@ export class CrossbowView extends ItemView {
 
   public load(): void {
     super.load();
-    this.draw();
+    this.navigation = false;
   }
 
-  public updateResults = (results: CrossbowSuggestion[]): void => {
-    this.results = results
-    this.draw();
-  };
+  public setSuggestions = (suggestions: CrossbowSuggestion[]): void => {
+    if (suggestions)
+      suggestions.forEach(suggestion => this.addSuggestionTreeItem(suggestion));
+  }
 
-  public clear = (): void => this.containerEl.empty();
+  public updateSuggestions = (newSuggestions: CrossbowSuggestion[]): void => {
+    const currentSuggestions = this.getCurrentSuggestionTreeItems();
+    
+    const suggestionsToAdd = newSuggestions.filter(ns => undefined === currentSuggestions.find(cs => cs.suggestionsReference.word === ns.word));
 
-  private getRankEmoji = (rank: CrossbowCacheMatch['rank']): string => 
-    rank >= 8 ? '🏆' :
-    rank >= 5 ? '🥇' :
-    rank >= 2 ? '🥈' :
-    '🥉';
+    currentSuggestions
+      .map(ti => { return { ...ti, existsStill: false }})
+      .forEach(suggestionTreeItem => {
+        const sameButNewSuggestion = newSuggestions.find(s => s.word === suggestionTreeItem.suggestionsReference.word);
+        if (!sameButNewSuggestion) {
+          // Remove, it's stale
+          console.log(suggestionTreeItem);
+          suggestionTreeItem.delete();
+        }
+        else {
+          // Test if it requires an Update
+          console.log("Should have checked for update: " + suggestionTreeItem.suggestionsReference.word);
+          COMBAK
+        }
+      });
 
-  private readonly draw = (): void => {
-    this.clear();
+    suggestionsToAdd.forEach(s => this.addSuggestionTreeItem(s));
 
-    const nav = this.containerEl.createDiv({ cls: 'nav-header' });
-    const container = this.containerEl.createDiv({ cls: 'tag-container' });
+    // Find suggestions which are new -> New TreeItem
+    // Find suggestions which have more / less matches -> Update TreeItem
+    // Find suggestions which are stale -> Delete TreeItem
+    
+    // Update cached entries in the editor. Each editor has a `matches` Array prop.
+    // Instead of always re-pointing to the new matches array, we update the affected items.
 
-    // Build nav header
-    const navButtons = nav.createDiv({ cls: 'nav-buttons-container' });
-    const navButton = navButtons.createDiv({ cls: 'clickable-icon nav-action-button', attr: { 'aria-label': 'Run Crossbow' } });
-    setIcon(navButton, 'reset');
-    navButton.addEventListener('click', () => this.crossbow.runWithCacheUpdate());
+    // The matches array on the editor needs to be some sort of controller which can observe changes.
+    // On changes / new / delete we need to auto-magically update / add / remove tree-items in the view.
+    // COMBAK
 
     // Build tree items
-    if (this.results)
-      this.results.forEach(result => this.addResultTreeItem(container, result));
+    // if (newSuggestions)
+    //   newSuggestions.forEach(result => this.addSuggestionTreeItem(result));
   };
 
-  private addResultTreeItem = (
-    container: Readonly<HTMLDivElement>, 
-    result: CrossbowSuggestion,
-  ) => {
-    const ranks = new Set<number>();
-    result.matches.forEach(match => ranks.add(match.rank));
-    const availableMatchRanks = Array.from(ranks).sort((a,b) => b - a).map(rank => this.getRankEmoji(rank as CrossbowCacheMatch['rank'])).join('');
+  public clear = (): void => this.contentEl.empty();
 
-    const item = new CrossbowTreeItem(container, result.word);
-    item.addFlair(availableMatchRanks);
-    item.addTextSuffix(`(${result.occurrences.length.toString()})`);
+  private getCurrentSuggestionTreeItems = (): CrossbowSuggestionTreeItem[] => 
+    this.contentEl.children.length > 0 ? Array.from(this.contentEl.children) as CrossbowSuggestionTreeItem[] : [];
+
+  private addSuggestionTreeItem = (suggestion: CrossbowSuggestion) => {
+    const ranks = new Set<CrossbowCacheMatch['rank']>();
+    suggestion.matches.forEach(match => ranks.add(match.rank));
+
+    const availableMatchRanks = Array.from(ranks).sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!).join('');
+
+    const rootItem = new CrossbowSuggestionTreeItem(this.contentEl, suggestion);
+    rootItem.addFlair(availableMatchRanks);
+    rootItem.addTextSuffix(`(${suggestion.occurrences.length.toString()})`);
   
-    result.occurrences.forEach(occurrence => this.addResultWordOccurrenceTreeItem(item.getChildrenContainer(), result.word, result.matches, occurrence));
-    return item;
-  }
-
-  private addResultWordOccurrenceTreeItem = (
-    parent: Readonly<HTMLDivElement>,
-    resultWord: CrossbowSuggestion['word'],
-    resultMatches: CrossbowSuggestion['matches'],
-    occurrence: EditorPosition,
-  ) => {
-    const item = new CrossbowTreeItem(parent, `On line ${occurrence.line}:${occurrence.ch}`);
+    // Occurrences
+    suggestion.occurrences.forEach(occurrence => {
+      const childItem = new CrossbowOccurrenceTreeItem(rootItem, occurrence);
     
-    // Scroll into view action
-    const scrollIntoView = () => {
-      const occurrenceEnd = { ch: occurrence.ch + resultWord.length, line: occurrence.line } as EditorPosition
-      this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd);
-      this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd }, true)
-    }
+      // Scroll into view action
+      const scrollIntoView = () => {
+        const occurrenceEnd = { ch: occurrence.ch + suggestion.word.length, line: occurrence.line } as EditorPosition
+        this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd);
+        this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd }, true)
+      }
 
-    // Can be invoked via flair button
-    item.addButton("Scroll into View", "lucide-scroll", (ev: MouseEvent) => {
-      scrollIntoView();
-      ev.preventDefault();
-      ev.stopPropagation();
-    });
-
-    // As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
-    item.addOnClick(() => {
-      if (!item.isCollapsed())
+      // Can be invoked via flair button
+      childItem.addButton("Scroll into View", "lucide-scroll", (ev: MouseEvent) => {
         scrollIntoView();
-    });
-
-    resultMatches.forEach(match => {
-      const childItem = new CrossbowTreeItemLeaf(item.getChildrenContainer(), `${this.getRankEmoji(match.rank)} ${match.text}`);
-
-      // Add backlink & remove action
-      childItem.addButton("Use", 'lucide-inspect', () => {
-        item.disable();
-
-        const occurrenceEnd = { ch: occurrence.ch + resultWord.length, line: occurrence.line } as EditorPosition
-        const link = match.item ? 
-          this.app.fileManager.generateMarkdownLink(match.file, match.text, "#" + match.text, resultWord) : 
-          this.app.fileManager.generateMarkdownLink(match.file, match.text, undefined, resultWord);
-
-        this.crossbow.currentEditor.replaceRange(link, occurrence, occurrenceEnd);
+        ev.preventDefault();
+        ev.stopPropagation();
       });
 
-      // Go to source
-      childItem.addButton("Source", 'lucide-search', () => {
-        console.warn("🏹: Go To Source is not yet implemented");
+      // As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
+      childItem.addOnClick(() => {
+        if (!childItem.isCollapsed())
+          scrollIntoView();
       });
+
+      // Matches
+      suggestion.matches
+        .sort((a, b) => a.rank.codePointAt(0)! - b.rank.codePointAt(0)!)
+        .forEach(match => {
+          const leafChildItem = new CrossbowMatchTreeItemLeaf(childItem, match);
+
+          // Add backlink & remove action
+          leafChildItem.addButton("Use", 'lucide-inspect', () => {
+            (Array.from(childItem.getChildrenContainer().children) as CrossbowOccurrenceTreeItem[])
+              .forEach(ti => ti.setDisable());
+
+            const occurrenceEnd = { ch: occurrence.ch + suggestion.word.length, line: occurrence.line } as EditorPosition
+            const link = match.item ? 
+              this.app.fileManager.generateMarkdownLink(match.file, match.text, "#" + match.text, suggestion.word) : 
+              this.app.fileManager.generateMarkdownLink(match.file, match.text, undefined, suggestion.word);
+
+            this.crossbow.currentEditor.replaceRange(link, occurrence, occurrenceEnd);
+          });
+
+          // Go to source action
+          leafChildItem.addButton("Source", 'lucide-search', () => {
+            console.warn("🏹: Go To Source is not yet implemented");
+          });
+        });
     });
 
-    return item;
+    return rootItem;
   }
 }
 
-class CrossbowTreeItemLeaf extends HTMLElement {
+abstract class TreeItemLeaf extends HTMLElement {
   protected readonly mainWrapper: HTMLDivElement;
   private readonly inner: HTMLDivElement; 
   private readonly buttons: ButtonComponent[] = [];
 
-  constructor(parent: HTMLDivElement, text: string = "") {
+  constructor(parent: HTMLElement) {
     super();
 
     this.addClass("tree-item");
@@ -151,15 +164,17 @@ class CrossbowTreeItemLeaf extends HTMLElement {
     this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
 
     parent.appendChild(this);
-
-    this.setText(text);
   }
 
-  public setText = (text: string) => this.inner.innerText = text;
+  get text(): string { return this.inner.innerText; }
+  set text(v: string) { this.inner.innerText = v; }
 
-  public disable = () => {
+  public abstract getText: () => string;
+  public setText = () => this.inner.innerText = this.getText();
+
+  public setDisable = () => {
     this.mainWrapper.style.textDecoration = 'line-through';
-    this.buttons.forEach(button => button.disabled = true);
+    this.buttons.forEach(button => button.setDisabled(true));
   }
 
   public addOnClick = (listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any) => {
@@ -186,16 +201,14 @@ class CrossbowTreeItemLeaf extends HTMLElement {
 
     this.buttons.push(button);
   }
-
-  public static register = () => customElements.define("crossbow-tree-item-leaf", CrossbowTreeItemLeaf);
 }
 
-class CrossbowTreeItem extends CrossbowTreeItemLeaf {
+abstract class TreeItem extends TreeItemLeaf {
   private readonly childrenWrapper: HTMLDivElement;
   private readonly iconWrapper: HTMLDivElement;
 
-  public constructor(parent: HTMLDivElement, text: string = "") {
-    super(parent, text);
+  public constructor(parent: HTMLElement) {
+    super(parent);
 
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
@@ -218,14 +231,7 @@ class CrossbowTreeItem extends CrossbowTreeItemLeaf {
     this.mainWrapper.addEventListener('click', () => this.isCollapsed() ? this.expand() : this.collapse());
   }
 
-  public getChildrenContainer = (): Readonly<HTMLDivElement> => {
-    return Object.freeze(this.childrenWrapper);
-  }
-
-  public disable = () => {
-    super.disable();
-    this.childrenWrapper.remove();
-  }
+  public getChildrenContainer = (): Readonly<HTMLDivElement> => Object.freeze(this.childrenWrapper);
 
   public isCollapsed = () => this.hasClass("is-collapsed");
 
@@ -239,5 +245,49 @@ class CrossbowTreeItem extends CrossbowTreeItemLeaf {
     this.childrenWrapper.style.display = 'none';
   }
 
-  public static register = () => customElements.define("crossbow-tree-item", CrossbowTreeItem);
+  public setDisable = () => {
+    super.setDisable();
+    this.mainWrapper.style.textDecoration = 'line-through';
+    Array.from(this.childrenWrapper.children).forEach(child => (child as TreeItem).setDisable());
+  }
+
+  public delete = () => {
+    this.remove();
+  }
+}
+
+class CrossbowMatchTreeItemLeaf extends TreeItemLeaf {
+  public readonly matchReference: CrossbowCacheMatch;
+  constructor(parent: CrossbowOccurrenceTreeItem, matchReference: CrossbowCacheMatch) {
+    super(parent.getChildrenContainer());
+    this.matchReference = matchReference;
+    this.setText();
+  }
+
+  public getText = () => `${this.matchReference.rank} ${this.matchReference.text}`;
+  public static register = () => customElements.define("crossbow-match-tree-item-leaf", CrossbowMatchTreeItemLeaf);
+}
+
+class CrossbowOccurrenceTreeItem extends TreeItem {
+  public readonly occurrenceReference: EditorPosition;
+  constructor(parent: CrossbowSuggestionTreeItem, occurrenceReference: EditorPosition) {
+    super(parent.getChildrenContainer());
+    this.occurrenceReference = occurrenceReference;
+    this.setText();
+  }
+
+  public getText = () => `On line ${this.occurrenceReference.line}:${this.occurrenceReference.ch}`
+  public static register = () => customElements.define("crossbow-match-tree-item", CrossbowOccurrenceTreeItem);
+}
+
+class CrossbowSuggestionTreeItem extends TreeItem {
+  public readonly suggestionsReference: CrossbowSuggestion;
+  constructor(parent: HTMLElement, suggestionsReference: CrossbowSuggestion) { 
+    super(parent);
+    this.suggestionsReference = suggestionsReference;
+    this.setText();
+  }
+
+  public getText = () => this.suggestionsReference.word;
+  public static register = () => customElements.define("crossbow-suggestion-tree-item", CrossbowSuggestionTreeItem);
 }

@@ -9,11 +9,11 @@ With that, your knowledge graph will gain some desperatly needed edges - it'll b
 Just open the crossbow sidebar by clicking on the crossbow icon. All the suggestions will appear within the sidebar.
 Clicking on an entry will navigate to the word occurance in the currently open editor.
 
-![alt](./assets/crossbow1.png)
+## IMAGE
 
 By clicking on a suggestion within the entry, crossbow will insert a link with the appropriate displayname.
 
-![alt](./assets/crossbow2.png)
+## IMAGE
 
 ## How to install
 
@@ -31,6 +31,12 @@ By clicking on a suggestion within the entry, crossbow will insert a link with t
 * [x] General UX Improvement
 * [ ] Add "Goto Source" action on suggestions
 * [ ] Push to community plugin list
+
+### Refactors
+
+* [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax operators)
+* [ ] Fix `TreeItemLeaf.setText()` to be called in the base class on initialization, instead of calling it separately in all derived classes
+* [ ] Move `register()` to the `TreeItemLeaf` base class and require derivatives to implement it.
 
 ### Releasing new releases
 

@@ -53,6 +53,6 @@ export class CrossbowSettingTab extends PluginSettingTab {
   private updateSettingValue = async <K extends keyof CrossbowPluginSettings>(key: K, value: CrossbowPluginSettings[K]) => {
     this.plugin.settings[key] = value;
     await this.plugin.saveSettings();
-    this.plugin.runWithCacheUpdate();
+    this.plugin.runWithCacheUpdate(true);
   }
 }

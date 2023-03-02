@@ -26,7 +26,7 @@ export interface CrossbowCacheEntity {
 
 export type CrossbowCache = { [key: string]: CrossbowCacheEntity }
 
-export type CrossbowCacheMatch = CrossbowCacheEntity & { rank: (1|2|3|4|5|6|7|8|9|10) & number }
+export type CrossbowCacheMatch = CrossbowCacheEntity & { rank: '🏆'|'🥇'|'🥈'|'🥉' }
 
 export class CrossbowSuggestion {
   public word: string;
@@ -49,7 +49,7 @@ export default class CrossbowPlugin extends Plugin {
 
   private addOrUpdateCacheEntity = (entity: CrossbowCacheEntity) => this.crossbowCache[entity.text] = entity;
   
-  private getCrossbowCacheMatchesInCurrentEditor = (): CrossbowSuggestion[] => {
+  private getCrossbowSuggestionsInCurrentEditor = (): CrossbowSuggestion[] => {
     const result: CrossbowSuggestion[] = [];
     const wordLookup = this.currentEditor.getWordLookup();
 
@@ -62,25 +62,17 @@ export default class CrossbowPlugin extends Plugin {
         // If we have a complete match, we always add it, even if it does not satisfy the filters. Say we have a chapter with a heading 'C' (the programming language)
         // We do want to match a word 'C' in the current editor.
         if (crossbowCacheKey === word) {
-          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: 10 });
+          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🏆' });
           return;
         }
         if (crossbowCacheKey.toLowerCase() === word.toLowerCase()) {
-          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: 7 });
+          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🥇' });
           return;
         }
 
         // Hard-filters on words of current editor:
         // If the word is too short, skip
         if (word.length <= 3)
-          return;
-        // If the word is an obsidian link, skip
-        if (word.startsWith('[[') && word.endsWith(']]')) 
-          return;
-        // If the word is a link, skip
-        if (word.startsWith('[') || word.startsWith('![') || word.endsWith(']'))
-          return;
-        if (word.startsWith('#')) 
           return;
         if (this.settings.ignoredWords.includes(word)) 
           return;
@@ -102,11 +94,11 @@ export default class CrossbowPlugin extends Plugin {
         // Soft-filters:
         // If the lengths differ too much, add as not-very-good suggestion
         if ((1 / crossbowCacheKey.length * word.length) <= 0.2) {
-          matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: 1 });
+          matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: '🥉' });
           return;
         }
 
-        matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: 4 });
+        matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: '🥈' });
       })
   
       const matches = Array.from(matchSet);
@@ -117,12 +109,6 @@ export default class CrossbowPlugin extends Plugin {
     })
 
     return result;
-    // Update cached entries in the editor. Each editor has a `matches` Array prop.
-    // Instead of always re-pointing to the new matches array, we update the affected items.
-
-    // The matches array on the editor needs to be some sort of controller which can observe changes.
-    // On changes / new / delete we need to auto-magically update / add / remove tree-items in the view.
-    // COMBAK
   }
 
   // 'cache' can be passed in, if this is called from an event handler which already has the cache
@@ -154,16 +140,18 @@ export default class CrossbowPlugin extends Plugin {
       console.warn('🏹: Unable to determine current editor.');
   }
 
-  public runWithCacheUpdate = () => {
+  public runWithCacheUpdate = (editorHasChanged: boolean) => {
     const files = this.app.vault.getFiles();
     files.forEach((file) => this.updateCrossbowCacheEntitiesOfFile(file));
-    this.runWithoutCacheUpdate();
+    this.runWithoutCacheUpdate(editorHasChanged);
   }
 
-  public runWithoutCacheUpdate = () => {
-    this.view.clear();
-    const data = this.getCrossbowCacheMatchesInCurrentEditor();
-    this.view.updateResults(data);
+  public runWithoutCacheUpdate = (editorHasChanged: boolean) => {
+    const data = this.getCrossbowSuggestionsInCurrentEditor();
+
+    editorHasChanged ?
+      this.view.setSuggestions(data) :
+      this.view.updateSuggestions(data);
   }
 
   public onload = async () => {
@@ -196,13 +184,18 @@ export default class CrossbowPlugin extends Plugin {
 
     // Evenhandler for file-open events
     this.app.workspace.on('file-open', () => {
+      const currentEditor = this._currentEditor;
+
       this.setActiveEditorAndFile()
       console.log('🏹: File opened.');
       
       if (this.timeout) 
         clearTimeout(this.timeout)
 
-      this.timeout = setTimeout(() => this.runWithoutCacheUpdate(), 100)
+      this.timeout = setTimeout(() => {
+        if (this._currentEditor !== currentEditor)
+          this.runWithoutCacheUpdate(true)
+      }, 100);
     })
 
     // Eventhandler for metadata cache updates
@@ -213,7 +206,7 @@ export default class CrossbowPlugin extends Plugin {
       if (this.timeout)
         clearTimeout(this.timeout)
 
-      this.runWithoutCacheUpdate()
+      this.runWithoutCacheUpdate(false)
     })
 
     // Run initially
@@ -223,7 +216,7 @@ export default class CrossbowPlugin extends Plugin {
       
       try {
         this.setActiveEditorAndFile()
-        this.runWithCacheUpdate();
+        this.runWithCacheUpdate(true);
       }
       catch (e) { /* ignore */ }
     }
