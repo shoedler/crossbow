@@ -1,4 +1,4 @@
-import { CrossbowView } from 'view';
+import { CrossbowView } from 'view/view';
 import { registerCrossbowIcons } from 'icons';
 import { CacheItem, Editor, MarkdownView, Plugin, TFile, EditorPosition, CachedMetadata } from 'obsidian';
 import { CrossbowSettingTab } from './settings';

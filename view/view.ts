@@ -5,6 +5,7 @@ import {
   ItemView,
   WorkspaceLeaf,
 } from 'obsidian';
+import { TreeItem, TreeItemLeaf } from './treeItem';
 
 export class CrossbowView extends ItemView {
   private readonly crossbow: CrossbowPlugin;
@@ -38,17 +39,16 @@ export class CrossbowView extends ItemView {
   }
 
   public setSuggestions = (suggestions: CrossbowSuggestion[]): void => {
+    this.clear();
     if (suggestions)
       suggestions.forEach(suggestion => this.addSuggestionTreeItem(suggestion));
   }
 
+  
   public updateSuggestions = (newSuggestions: CrossbowSuggestion[]): void => {
     const currentSuggestions = this.getCurrentSuggestionTreeItems();
     
-    const suggestionsToAdd = newSuggestions.filter(ns => undefined === currentSuggestions.find(cs => cs.suggestionsReference.word === ns.word));
-
     currentSuggestions
-      .map(ti => { return { ...ti, existsStill: false }})
       .forEach(suggestionTreeItem => {
         const sameButNewSuggestion = newSuggestions.find(s => s.word === suggestionTreeItem.suggestionsReference.word);
         if (!sameButNewSuggestion) {
@@ -58,27 +58,39 @@ export class CrossbowView extends ItemView {
         }
         else {
           // Test if it requires an Update
-          console.log("Should have checked for update: " + suggestionTreeItem.suggestionsReference.word);
-          COMBAK
+          const isSameOccurrence = (a: EditorPosition, b: EditorPosition) => 
+            a.line === b.line && a.ch === b.ch;
+          const isSameMatch = (a: CrossbowCacheMatch, b: CrossbowCacheMatch) =>
+            a.file.path === b.file.path && a.item?.position.start === b.item?.position.start && a.item?.position.end === b.item?.position.end;
+
+          const newOrChangedOccurrences = sameButNewSuggestion.occurrences.filter(o => !suggestionTreeItem.suggestionsReference.occurrences.find(so => isSameOccurrence(so, o)));
+          const sameOccurrences =         sameButNewSuggestion.occurrences.filter(o =>  suggestionTreeItem.suggestionsReference.occurrences.find(so => isSameOccurrence(so, o)));
+          const staleOccurrences = suggestionTreeItem.suggestionsReference.occurrences.filter(o => !sameButNewSuggestion.occurrences.find(so => isSameOccurrence(so, o)));
+
+          const newOrChangedMatches = sameButNewSuggestion.matches.filter(m => !suggestionTreeItem.suggestionsReference.matches.find(sm => isSameMatch(sm, m)));
+          const sameMatches =         sameButNewSuggestion.matches.filter(m =>  suggestionTreeItem.suggestionsReference.matches.find(sm => isSameMatch(sm, m)));
+          const staleMatches = suggestionTreeItem.suggestionsReference.matches.filter(m => !sameButNewSuggestion.matches.find(sm => isSameMatch(sm, m)));
+
+          const noOccurrenceChanges = newOrChangedOccurrences.length === 0 && staleOccurrences.length === 0 && sameOccurrences.length === suggestionTreeItem.suggestionsReference.occurrences.length
+          const noMatchChanges = newOrChangedMatches.length === 0 && staleMatches.length === 0 && sameMatches.length === suggestionTreeItem.suggestionsReference.matches.length
+
+          if (noOccurrenceChanges && noMatchChanges) {
+            console.log("No Changes for: " + suggestionTreeItem.suggestionsReference.word);
+          }
+          else {
+            console.log("Changes for: " + suggestionTreeItem.suggestionsReference.word);
+
+            if (newOrChangedOccurrences.length > 0) console.log("Should add occurrences: " + newOrChangedOccurrences.length);
+            if (staleOccurrences.length > 0) console.log("Should remove occurrences: " + staleOccurrences.length);
+            if (newOrChangedMatches.length > 0) console.log("Should add matches: " + newOrChangedMatches.length);
+            if (staleMatches.length > 0) console.log("Should remove matches: " + staleMatches.length);
+          }
         }
       });
 
+    // Add new suggestions
+    const suggestionsToAdd = newSuggestions.filter(ns => undefined === currentSuggestions.find(cs => cs.suggestionsReference.word === ns.word));
     suggestionsToAdd.forEach(s => this.addSuggestionTreeItem(s));
-
-    // Find suggestions which are new -> New TreeItem
-    // Find suggestions which have more / less matches -> Update TreeItem
-    // Find suggestions which are stale -> Delete TreeItem
-    
-    // Update cached entries in the editor. Each editor has a `matches` Array prop.
-    // Instead of always re-pointing to the new matches array, we update the affected items.
-
-    // The matches array on the editor needs to be some sort of controller which can observe changes.
-    // On changes / new / delete we need to auto-magically update / add / remove tree-items in the view.
-    // COMBAK
-
-    // Build tree items
-    // if (newSuggestions)
-    //   newSuggestions.forEach(result => this.addSuggestionTreeItem(result));
   };
 
   public clear = (): void => this.contentEl.empty();
@@ -150,133 +162,27 @@ export class CrossbowView extends ItemView {
   }
 }
 
-abstract class TreeItemLeaf extends HTMLElement {
-  protected readonly mainWrapper: HTMLDivElement;
-  private readonly inner: HTMLDivElement; 
-  private readonly buttons: ButtonComponent[] = [];
-
-  constructor(parent: HTMLElement) {
-    super();
-
-    this.addClass("tree-item");
-    this.mainWrapper = this.createDiv({ cls: 'tree-item-self is-clickable' });
-
-    this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
-
-    parent.appendChild(this);
-  }
-
-  get text(): string { return this.inner.innerText; }
-  set text(v: string) { this.inner.innerText = v; }
-
-  public abstract getText: () => string;
-  public setText = () => this.inner.innerText = this.getText();
-
-  public setDisable = () => {
-    this.mainWrapper.style.textDecoration = 'line-through';
-    this.buttons.forEach(button => button.setDisabled(true));
-  }
-
-  public addOnClick = (listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any) => {
-    this.mainWrapper.addEventListener('click', listener);
-  }
-
-  public addFlair = (text: string) => {
-    const flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
-    const flair = flairWrapper.createEl('span', { cls: 'tree-item-flair' });
-    flair.innerText = text;
-  }
-
-  public addTextSuffix = (text: string) => {
-    const textEl = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
-    textEl.innerText = text;
-  }
-
-  public addButton = (label: string, iconName:string, onclick: (this: HTMLDivElement, ev: MouseEvent) => any) => {
-    const button = new ButtonComponent(this.mainWrapper);
-    button.setTooltip(label);
-    button.setIcon(iconName);
-    button.setClass('tree-item-button');
-    button.onClick(onclick);
-
-    this.buttons.push(button);
-  }
-}
-
-abstract class TreeItem extends TreeItemLeaf {
-  private readonly childrenWrapper: HTMLDivElement;
-  private readonly iconWrapper: HTMLDivElement;
-
-  public constructor(parent: HTMLElement) {
-    super(parent);
-
-    this.addClass('is-collapsed');
-    this.mainWrapper.addClass('mod-collapsible');
-
-    this.childrenWrapper = document.createElement('div');
-    this.childrenWrapper.addClass('tree-item-children');
-    this.childrenWrapper.style.display = 'none';
-
-    this.iconWrapper = document.createElement('div');
-    this.iconWrapper.addClass('tree-item-icon', 'collapse-icon');
-    this.iconWrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle">
-      <path d="M3 8L12 17L21 8"></path>
-    </svg>
-    `;
-
-    this.appendChild(this.childrenWrapper);
-    this.mainWrapper.prepend(this.iconWrapper);
-
-    // Collapse / Fold
-    this.mainWrapper.addEventListener('click', () => this.isCollapsed() ? this.expand() : this.collapse());
-  }
-
-  public getChildrenContainer = (): Readonly<HTMLDivElement> => Object.freeze(this.childrenWrapper);
-
-  public isCollapsed = () => this.hasClass("is-collapsed");
-
-  public expand = () => {
-    this.removeClass("is-collapsed");
-    this.childrenWrapper.style.display = "block";
-  }
-
-  public collapse = () => {
-    this.addClass("is-collapsed");
-    this.childrenWrapper.style.display = 'none';
-  }
-
-  public setDisable = () => {
-    super.setDisable();
-    this.mainWrapper.style.textDecoration = 'line-through';
-    Array.from(this.childrenWrapper.children).forEach(child => (child as TreeItem).setDisable());
-  }
-
-  public delete = () => {
-    this.remove();
-  }
-}
-
 class CrossbowMatchTreeItemLeaf extends TreeItemLeaf {
-  public readonly matchReference: CrossbowCacheMatch;
+  public readonly match: CrossbowCacheMatch;
   constructor(parent: CrossbowOccurrenceTreeItem, matchReference: CrossbowCacheMatch) {
     super(parent.getChildrenContainer());
-    this.matchReference = matchReference;
+    this.match = matchReference;
     this.setText();
   }
 
-  public getText = () => `${this.matchReference.rank} ${this.matchReference.text}`;
+  public getText = () => `${this.match.rank} ${this.match.text}`;
   public static register = () => customElements.define("crossbow-match-tree-item-leaf", CrossbowMatchTreeItemLeaf);
 }
 
 class CrossbowOccurrenceTreeItem extends TreeItem {
-  public readonly occurrenceReference: EditorPosition;
+  public readonly occurrence: EditorPosition;
   constructor(parent: CrossbowSuggestionTreeItem, occurrenceReference: EditorPosition) {
     super(parent.getChildrenContainer());
-    this.occurrenceReference = occurrenceReference;
+    this.occurrence = occurrenceReference;
     this.setText();
   }
 
-  public getText = () => `On line ${this.occurrenceReference.line}:${this.occurrenceReference.ch}`
+  public getText = () => `On line ${this.occurrence.line}:${this.occurrence.ch}`
   public static register = () => customElements.define("crossbow-match-tree-item", CrossbowOccurrenceTreeItem);
 }
 
