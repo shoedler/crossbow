@@ -7,31 +7,23 @@ export class TreeItemLeaf<TData> extends HTMLElement {
   private readonly buttons: ButtonComponent[] = [];
   protected readonly mainWrapper: HTMLDivElement;
   protected readonly flairWrapper: HTMLDivElement;
-  private readonly textGetter: (data: TData) => string;
-
-  private _data: TData;
-  get data(): TData {
-    return this._data;
-  }
-  set data(v: TData) {
-    this._data = v;
-    this.inner.innerText = this.textGetter(v);
-  }
+  public readonly data: TData;
   
   constructor(data: TData, textGetter: (data: TData) => string) {
     super();
-
-    this.textGetter = textGetter;
     
     this.addClass("tree-item");
     this.mainWrapper = this.createDiv({ cls: 'tree-item-self is-clickable' });
-    this.flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
     
     this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
+    this.flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
+
+    this.data = data;
+    this.inner.setText(textGetter(data));
+    
     this.suffix = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
     this.flair = this.flairWrapper.createEl('span', { cls: 'tree-item-flair' });
 
-    this.data = data;
   }
   
   public static register = () => customElements.define("tree-item-leaf", TreeItemLeaf);

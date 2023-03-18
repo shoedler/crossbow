@@ -140,15 +140,15 @@ export default class CrossbowPlugin extends Plugin {
       console.warn('🏹: Unable to determine current editor.');
   }
 
-  public runWithCacheUpdate = (editorHasChanged: boolean) => {
+  public runWithCacheUpdate = (fileHasChanged: boolean) => {
     const files = this.app.vault.getFiles();
     files.forEach((file) => this.updateCrossbowCacheEntitiesOfFile(file));
-    this.runWithoutCacheUpdate(editorHasChanged);
+    this.runWithoutCacheUpdate(fileHasChanged);
   }
 
-  public runWithoutCacheUpdate = (editorHasChanged: boolean) => {
+  public runWithoutCacheUpdate = (fileHasChanged: boolean) => {
     const data = this.getCrossbowSuggestionsInCurrentEditor();
-    this.view.updateSuggestions(data, editorHasChanged);
+    this.view.updateSuggestions(data, fileHasChanged);
   }
 
   public onload = async () => {
@@ -182,7 +182,7 @@ export default class CrossbowPlugin extends Plugin {
 
     // Evenhandler for file-open events
     this.app.workspace.on('file-open', () => {
-      const prevCurrentEditor = this._currentEditor;
+      const prevCurrentFile = this._currentFile;
 
       this.setActiveEditorAndFile()
       console.log('🏹: File opened.');
@@ -191,12 +191,10 @@ export default class CrossbowPlugin extends Plugin {
         clearTimeout(this.timeout)
 
       this.timeout = setTimeout(() => {
-        if (!prevCurrentEditor)
+        if (!prevCurrentFile)
           this.runWithCacheUpdate(true); // Initial run
-        else if (this._currentEditor !== prevCurrentEditor)
-          this.runWithoutCacheUpdate(true)
-        else
-          console.log(prevCurrentEditor === this._currentEditor, prevCurrentEditor, this._currentEditor);
+        else if (this._currentFile !== prevCurrentFile)
+          this.runWithoutCacheUpdate(true) // File has changed
       }, 200);
     })
 

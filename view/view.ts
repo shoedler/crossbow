@@ -76,8 +76,8 @@ export class CrossbowView extends ItemView {
     return { onlyInOld, onlyInNew, inBoth };
   }
 
-  public updateSuggestions = (suggestions: CrossbowSuggestion[], editorHasChanged: boolean) => { 
-    console.log(`🏹: ${editorHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
+  public updateSuggestions = (suggestions: CrossbowSuggestion[], fileHasChanged: boolean) => { 
+    console.log(`🏹: ${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
     
     const occurrenceHash = (o: EditorPosition) => o.line + ":" + o.ch;
     const matchHash = (o: CrossbowCacheMatch) => o.file.path;
@@ -85,7 +85,7 @@ export class CrossbowView extends ItemView {
 
     const currentSuggestionTreeItems = this.getCurrentSuggestionTreeItems();
     
-    if (editorHasChanged) {
+    if (fileHasChanged) {
       this.clear();
     }
 
@@ -103,7 +103,6 @@ export class CrossbowView extends ItemView {
       if (existingSuggestionTreeItem) {
         // TODO: Save "collapsed" states of TreeItems, then remove the ones we need to update, and re-add them with the same collapsed state
         // TODO: Remove 'arrayCompare' and all uses.
-        // TODO: Move Ranks in Root TreeItem (Suggestions) to the right, instead of in front.
         // const wasCollapsed = existingSuggestionTreeItem.isCollapsed();
         // const occurrencesWhichWereCollapsed = existingSuggestionTreeItem.getChildren().filter(item => item.isCollapsed());
 
