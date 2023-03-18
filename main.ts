@@ -148,15 +148,13 @@ export default class CrossbowPlugin extends Plugin {
 
   public runWithoutCacheUpdate = (editorHasChanged: boolean) => {
     const data = this.getCrossbowSuggestionsInCurrentEditor();
-
-    editorHasChanged ?
-      this.view.setSuggestions(data) :
-      this.view.updateSuggestions(data);
+    this.view.updateSuggestions(data, editorHasChanged);
   }
 
   public onload = async () => {
     await this.loadSettings();
 
+    // Register view elements
     registerCrossbowIcons()
     this.registerView(CrossbowView.viewType, leaf => (this.view = new CrossbowView(leaf, this)));
 
@@ -184,7 +182,7 @@ export default class CrossbowPlugin extends Plugin {
 
     // Evenhandler for file-open events
     this.app.workspace.on('file-open', () => {
-      const currentEditor = this._currentEditor;
+      const prevCurrentEditor = this._currentEditor;
 
       this.setActiveEditorAndFile()
       console.log('🏹: File opened.');
@@ -193,9 +191,13 @@ export default class CrossbowPlugin extends Plugin {
         clearTimeout(this.timeout)
 
       this.timeout = setTimeout(() => {
-        if (this._currentEditor !== currentEditor)
+        if (!prevCurrentEditor)
+          this.runWithCacheUpdate(true); // Initial run
+        else if (this._currentEditor !== prevCurrentEditor)
           this.runWithoutCacheUpdate(true)
-      }, 100);
+        else
+          console.log(prevCurrentEditor === this._currentEditor, prevCurrentEditor, this._currentEditor);
+      }, 200);
     })
 
     // Eventhandler for metadata cache updates
@@ -208,18 +210,6 @@ export default class CrossbowPlugin extends Plugin {
 
       this.runWithoutCacheUpdate(false)
     })
-
-    // Run initially
-    while (!this.currentEditor) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      console.log('🏹: Waiting for editor to be ready.');
-      
-      try {
-        this.setActiveEditorAndFile()
-        this.runWithCacheUpdate(true);
-      }
-      catch (e) { /* ignore */ }
-    }
 
     console.log('🏹: Crossbow is ready.');
   }

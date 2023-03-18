@@ -6,6 +6,10 @@ import {
 } from 'obsidian';
 import { TreeItem, TreeItemLeaf } from './treeItem';
 
+type LeafTreeItem = TreeItemLeaf<CrossbowCacheMatch>
+type OccurrenceTreeItem = TreeItem<EditorPosition, LeafTreeItem>
+type SuggestionTreeItem = TreeItem<CrossbowSuggestion, OccurrenceTreeItem>
+
 export class CrossbowView extends ItemView {
   private readonly crossbow: CrossbowPlugin;
 
@@ -36,19 +40,10 @@ export class CrossbowView extends ItemView {
     this.navigation = false;
   }
 
-  public setSuggestions = (suggestions: CrossbowSuggestion[]): void => {
-    this.clear();
-    this.addSuggestionTreeItems(suggestions);
-  }
-
-  public updateSuggestions = (newSuggestions: CrossbowSuggestion[]): void => {
-    this.addSuggestionTreeItems(newSuggestions);
-  };
-
   public clear = (): void => this.contentEl.empty();
 
-  private getCurrentSuggestionTreeItems = (): TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>[] => 
-    this.contentEl.children.length > 0 ? Array.from(this.contentEl.children) as TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>[] : [];
+  private getCurrentSuggestionTreeItems = (): SuggestionTreeItem[] => 
+    this.contentEl.children.length > 0 ? Array.from(this.contentEl.children) as SuggestionTreeItem[] : [];
 
   private arrayCompare = <TOld, TNew>(old: TOld[], _new: TNew[], hashGetterOld: (inp: TOld) => string, hashGetterNew: (inp: TNew) => string): { onlyInOld: TOld[], onlyInNew: TNew[], inBoth: { old: TOld, _new: TNew }[] } => {
     const map: { [key: string]: { old?: TOld, _new?: TNew }} = {};
@@ -81,16 +76,36 @@ export class CrossbowView extends ItemView {
     return { onlyInOld, onlyInNew, inBoth };
   }
 
-  private addSuggestionTreeItems = (suggestions: CrossbowSuggestion[]) => {
+  public updateSuggestions = (suggestions: CrossbowSuggestion[], editorHasChanged: boolean) => { 
+    console.log(`🏹: ${editorHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
+    
+    const occurrenceHash = (o: EditorPosition) => o.line + ":" + o.ch;
+    const matchHash = (o: CrossbowCacheMatch) => o.file.path;
+    const compareSuggestion = (a: CrossbowSuggestion, b: CrossbowSuggestion) => a.word === b.word;
+
     const currentSuggestionTreeItems = this.getCurrentSuggestionTreeItems();
+    
+    if (editorHasChanged) {
+      this.clear();
+    }
+
+    // Sort suggestions
+    suggestions.sort((a, b) => a.word.localeCompare(b.word));
+    suggestions.forEach(suggestion => {
+      suggestion.occurrences.sort((a, b) => a.line - b.line);
+      suggestion.matches.sort((a, b) => a.rank.codePointAt(0)! - b.rank.codePointAt(0)!);
+    });
 
     suggestions.forEach(suggestion => {
       // Find if this treeItem already exists
-      const existingSuggestionTreeItem = currentSuggestionTreeItems.find(item => item.data.word === suggestion.word);
-
+      const existingSuggestionTreeItem = currentSuggestionTreeItems.find(item => compareSuggestion(item.data, suggestion));
+      
       if (existingSuggestionTreeItem) {
-        const occurrenceHash = (o: EditorPosition) => `${o.line}:${o.ch}`;
-        const matchHash = (m: CrossbowCacheMatch) => m.file.path;
+        // TODO: Save "collapsed" states of TreeItems, then remove the ones we need to update, and re-add them with the same collapsed state
+        // TODO: Remove 'arrayCompare' and all uses.
+        // TODO: Move Ranks in Root TreeItem (Suggestions) to the right, instead of in front.
+        // const wasCollapsed = existingSuggestionTreeItem.isCollapsed();
+        // const occurrencesWhichWereCollapsed = existingSuggestionTreeItem.getChildren().filter(item => item.isCollapsed());
 
         // Check if we need to update occurrences
         const existingOccurrenceTreeItems = existingSuggestionTreeItem.getChildren();
@@ -101,23 +116,22 @@ export class CrossbowView extends ItemView {
         const matchesDiff = this.arrayCompare(existingMatches, suggestion.matches, match => matchHash(match), match => matchHash(match));
 
         // States
-        const doAddNewOccurrences = occurrencesDiff.onlyInNew.length > 0;
-        const doUpdateMatches = 
+        const needToUpdateMatches = 
           matchesDiff.onlyInNew.length !== 0 || 
-          matchesDiff.onlyInOld.length !== 0 || // TODO: Optimize, in this case we can just remove the old ones
+          matchesDiff.onlyInOld.length !== 0 ||
           matchesDiff.inBoth.length !== existingMatches.length;
 
         // Execute update
         occurrencesDiff.onlyInOld.forEach(item => item.remove()); // No brainer, this is always allowed
 
-        if (doAddNewOccurrences) {
+        if (occurrencesDiff.onlyInNew.length > 0) {
           occurrencesDiff.onlyInNew.forEach(occurrence => {
             const occurrenceTreeItem = this.createOccurrenceTreeItem(existingSuggestionTreeItem, occurrence);
             this.createMatchTreeItemLeafes(occurrenceTreeItem, suggestion);
           });
         }
 
-        if (doUpdateMatches) {
+        if (needToUpdateMatches) {
           // In this case, we'll just re-generate all match tree items using the new-suggestion's matches
           existingOccurrenceTreeItems.forEach(occurrenceTreeItem => {
             // Clear children
@@ -132,9 +146,11 @@ export class CrossbowView extends ItemView {
     
         const availableMatchRanks = Array.from(ranks).sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!).join('');
     
-        const suggestionTreeItem = new TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>(this.contentEl, suggestion, data => data.word);
+        const suggestionTreeItem = new TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>(suggestion, data => data.word);
         suggestionTreeItem.addFlair(availableMatchRanks);
         suggestionTreeItem.addTextSuffix(`(${suggestion.occurrences.length.toString()})`);
+
+        this.contentEl.appendChild(suggestionTreeItem);
       
         // Occurrences
         suggestion.occurrences.forEach(occurrence => {
@@ -146,8 +162,8 @@ export class CrossbowView extends ItemView {
     });
   }
 
-  private createOccurrenceTreeItem = (suggestionTreeItem: TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>, occurrence: EditorPosition) => {
-    const occurrenceItem = new TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>(suggestionTreeItem, occurrence, data => `On line ${data.line}:${data.ch}`);
+  private createOccurrenceTreeItem = (suggestionTreeItem: SuggestionTreeItem, occurrence: EditorPosition) => {
+    const occurrenceItem = new TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>(occurrence, data => `On line ${data.line}:${data.ch}`);
 
     // Scroll into view action
     const scrollIntoView = () => {
@@ -169,6 +185,8 @@ export class CrossbowView extends ItemView {
         scrollIntoView();
     });
 
+    suggestionTreeItem.addChild(occurrenceItem);
+
     return occurrenceItem;
   }
 
@@ -176,7 +194,7 @@ export class CrossbowView extends ItemView {
     suggestion.matches
       .sort((a, b) => a.rank.codePointAt(0)! - b.rank.codePointAt(0)!)
       .forEach(match => {
-        const matchItem = new TreeItemLeaf(occurrenceTreeItem, match, data => `${data.rank} ${data.text}`);
+        const matchItem = new TreeItemLeaf(match, data => `${data.rank} ${data.text}`);
 
         // Add backlink & remove action
         matchItem.addButton("Use", 'lucide-inspect', () => {
@@ -195,77 +213,8 @@ export class CrossbowView extends ItemView {
         matchItem.addButton("Source", 'lucide-search', () => {
           console.warn("🏹: Go To Source is not yet implemented");
         });
+
+        occurrenceTreeItem.addChild(matchItem);
       });
-  }
-
-  private addSuggestionTreeItem = (suggestion: CrossbowSuggestion) => {
-    const ranks = new Set<CrossbowCacheMatch['rank']>();
-    suggestion.matches.forEach(match => ranks.add(match.rank));
-
-    const availableMatchRanks = Array.from(ranks).sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!).join('');
-
-    const rootItem = new TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>(this.contentEl, suggestion, data => data.word);
-    rootItem.addFlair(availableMatchRanks);
-    rootItem.addTextSuffix(`(${suggestion.occurrences.length.toString()})`);
-  
-    // Occurrences
-    suggestion.occurrences.forEach(occurrence => {
-      const childItem = new TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>(rootItem, occurrence, data => `On line ${data.line}:${data.ch}`);
-
-      // Scroll into view action
-      const scrollIntoView = () => {
-        const occurrenceEnd = { ch: occurrence.ch + suggestion.word.length, line: occurrence.line } as EditorPosition
-        this.crossbow.currentEditor.setSelection(occurrence, occurrenceEnd);
-        this.crossbow.currentEditor.scrollIntoView({ from: occurrence, to: occurrenceEnd }, true)
-      }
-
-      // Can be invoked via flair button
-      childItem.addButton("Scroll into View", "lucide-scroll", (ev: MouseEvent) => {
-        scrollIntoView();
-        ev.preventDefault();
-        ev.stopPropagation();
-      });
-
-      // As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
-      childItem.addOnClick(() => {
-        if (!childItem.isCollapsed())
-          scrollIntoView();
-      });
-
-      // Matches
-      suggestion.matches
-        .sort((a, b) => a.rank.codePointAt(0)! - b.rank.codePointAt(0)!)
-        .forEach(match => {
-          const leafChildItem = new TreeItemLeaf(childItem, match, data => `${data.rank} ${data.text}`);
-
-          // Add backlink & remove action
-          leafChildItem.addButton("Use", 'lucide-inspect', () => {
-            childItem.getChildren()
-              .forEach(ti => ti.setDisable());
-
-            const occurrenceEnd = { ch: occurrence.ch + suggestion.word.length, line: occurrence.line } as EditorPosition
-            const link = match.item ? 
-              this.app.fileManager.generateMarkdownLink(match.file, match.text, "#" + match.text, suggestion.word) : 
-              this.app.fileManager.generateMarkdownLink(match.file, match.text, undefined, suggestion.word);
-
-            this.crossbow.currentEditor.replaceRange(link, occurrence, occurrenceEnd);
-          });
-
-          // Go to source action
-          leafChildItem.addButton("Source", 'lucide-search', () => {
-            console.warn("🏹: Go To Source is not yet implemented");
-          });
-        });
-    });
-
-    return rootItem;
-  }
-}
-
-
-class TreeItemView {
-  public suggestions: TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>[] = [];
-  public update = (newSuggestions: CrossbowSuggestion[]) => {
-
   }
 }

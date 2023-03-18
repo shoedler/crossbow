@@ -2,33 +2,43 @@ import { ButtonComponent } from "obsidian";
 
 export class TreeItemLeaf<TData> extends HTMLElement {
   private readonly inner: HTMLDivElement;
+  private readonly suffix: HTMLSpanElement;
+  private readonly flair: HTMLSpanElement;
   private readonly buttons: ButtonComponent[] = [];
   protected readonly mainWrapper: HTMLDivElement;
+  protected readonly flairWrapper: HTMLDivElement;
+  private readonly textGetter: (data: TData) => string;
 
   private _data: TData;
-  public get data(): TData { return this._data; }
-  public set data(v: TData) { 
-    this._data = v; 
-    this.inner.innerText = this.textGetter(this.data);
+  get data(): TData {
+    return this._data;
+  }
+  set data(v: TData) {
+    this._data = v;
+    this.inner.innerText = this.textGetter(v);
   }
   
-  constructor(parent: HTMLElement | TreeItem<any, any>, data: TData, textGetter: (data: TData) => string) {
+  constructor(data: TData, textGetter: (data: TData) => string) {
     super();
 
     this.textGetter = textGetter;
     
     this.addClass("tree-item");
     this.mainWrapper = this.createDiv({ cls: 'tree-item-self is-clickable' });
+    this.flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
     
     this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
-    
-    (parent instanceof TreeItem ? parent.childrenWrapper : parent).appendChild(this);
+    this.suffix = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
+    this.flair = this.flairWrapper.createEl('span', { cls: 'tree-item-flair' });
+
     this.data = data;
   }
   
   public static register = () => customElements.define("tree-item-leaf", TreeItemLeaf);
 
-  private readonly textGetter: (data: TData) => string;
+  public attach = (parent: HTMLElement) => {
+    parent.appendChild(this);
+  }
 
   public setDisable = () => {
     this.mainWrapper.style.textDecoration = 'line-through';
@@ -40,14 +50,11 @@ export class TreeItemLeaf<TData> extends HTMLElement {
   }
 
   public addFlair = (text: string) => {
-    const flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
-    const flair = flairWrapper.createEl('span', { cls: 'tree-item-flair' });
-    flair.innerText = text;
+    this.flair.innerText = text;
   }
 
   public addTextSuffix = (text: string) => {
-    const textEl = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
-    textEl.innerText = text;
+    this.suffix.innerText = text;
   }
 
   public addButton = (label: string, iconName: string, onclick: (this: HTMLDivElement, ev: MouseEvent) => any) => {
@@ -62,11 +69,11 @@ export class TreeItemLeaf<TData> extends HTMLElement {
 }
 
 export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemLeaf<TData> {
-  public readonly childrenWrapper: HTMLDivElement;
+  protected readonly childrenWrapper: HTMLDivElement;
   private readonly iconWrapper: HTMLDivElement;
 
-  public constructor(parent: HTMLElement | TreeItem<any, any>, data: TData, textGetter: (data: TData) => string) {
-    super(parent, data, textGetter);
+  public constructor(data: TData, textGetter: (data: TData) => string) {
+    super(data, textGetter);
 
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
@@ -92,6 +99,8 @@ export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemL
   public static register = () => customElements.define("tree-item", TreeItem);
 
   public getChildren = () => Array.from(this.childrenWrapper.children) as TChild[];
+
+  public addChild = (child: TreeItemLeaf<any>) => this.childrenWrapper.appendChild(child);
 
   public isCollapsed = () => this.hasClass("is-collapsed");
 
