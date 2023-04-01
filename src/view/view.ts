@@ -1,4 +1,4 @@
-import CrossbowPlugin, { CrossbowCacheMatch, CrossbowSuggestion } from 'main';
+import CrossbowPlugin, { CrossbowCacheMatch, CrossbowSuggestion } from '../main';
 import {
   EditorPosition,
   ItemView,
