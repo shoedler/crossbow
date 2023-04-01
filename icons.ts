@@ -1,6 +1,5 @@
 import { addIcon } from "obsidian";
 
-
 const crossbowIcon = {
   name: "crossbow",
   svg: `

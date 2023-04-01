@@ -8,24 +8,24 @@ export class TreeItemLeaf<TData> extends HTMLElement {
   protected readonly mainWrapper: HTMLDivElement;
   protected readonly flairWrapper: HTMLDivElement;
   public readonly data: TData;
-  
+
   constructor(data: TData, textGetter: (data: TData) => string) {
     super();
-    
+
     this.addClass("tree-item");
     this.mainWrapper = this.createDiv({ cls: 'tree-item-self is-clickable' });
-    
+
     this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
     this.flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
 
     this.data = data;
     this.inner.setText(textGetter(data));
-    
+
     this.suffix = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
     this.flair = this.flairWrapper.createEl('span', { cls: 'tree-item-flair' });
 
   }
-  
+
   public static register = () => customElements.define("tree-item-leaf", TreeItemLeaf);
 
   public attach = (parent: HTMLElement) => {
@@ -70,10 +70,10 @@ export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemL
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
 
-    this.childrenWrapper = createEl('div', { cls: 'tree-item-children'});
+    this.childrenWrapper = createEl('div', { cls: 'tree-item-children' });
     this.childrenWrapper.style.display = 'none';
 
-    this.iconWrapper = createEl('div', { cls: ['tree-item-icon', 'collapse-icon']})
+    this.iconWrapper = createEl('div', { cls: ['tree-item-icon', 'collapse-icon'] })
     this.iconWrapper.appendChild(getIcon('right-triangle')!);
 
     this.appendChild(this.childrenWrapper);

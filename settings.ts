@@ -42,9 +42,9 @@ export class CrossbowSettingTab extends PluginSettingTab {
       .addText(text => text
         .setValue(this.plugin.settings.suggestedReferencesMinimumWordLength.toString())
         .onChange(async value => {
-          if (!/^\s*\d+\s*$/.test(value)) 
+          if (!/^\s*\d+\s*$/.test(value))
             console.error(`Cannot set "suggestedReferencesMinimumWordLength" to NaN. Must be integer`);
-          else 
+          else
             await this.updateSettingValue('suggestedReferencesMinimumWordLength', parseInt(value, 10));
         }));
   }

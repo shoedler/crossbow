@@ -2,7 +2,7 @@ import { CrossbowView } from 'view/view';
 import { registerCrossbowIcons } from 'icons';
 import { CacheItem, Editor, MarkdownView, Plugin, TFile, EditorPosition, CachedMetadata } from 'obsidian';
 import { CrossbowSettingTab } from './settings';
-import { debugLog, warn } from './util';
+import { crossbowLogger } from './util';
 import './editorExtension';
 
 export interface CrossbowPluginSettings {
@@ -27,7 +27,7 @@ export interface CrossbowCacheEntity {
 
 export type CrossbowCache = { [key: string]: CrossbowCacheEntity }
 
-export type CrossbowCacheMatch = CrossbowCacheEntity & { rank: '🏆'|'🥇'|'🥈'|'🥉' }
+export type CrossbowCacheMatch = CrossbowCacheEntity & { rank: '🏆' | '🥇' | '🥈' | '🥉' }
 
 export class CrossbowSuggestion {
   public word: string;
@@ -38,7 +38,7 @@ export class CrossbowSuggestion {
 export default class CrossbowPlugin extends Plugin {
   public settings: CrossbowPluginSettings;
   private _currentEditor: Editor;
-  public get currentEditor(): Editor { return this._currentEditor; } 
+  public get currentEditor(): Editor { return this._currentEditor; }
   private _currentFile: TFile;
   public get currentFile(): TFile { return this._currentFile; }
 
@@ -67,17 +67,17 @@ export default class CrossbowPlugin extends Plugin {
     // Ribbon icon to access the crossbow pane
     this.addRibbonIcon('crossbow', 'Crossbow', async (ev: MouseEvent) => {
       const existing = this.app.workspace.getLeavesOfType(CrossbowView.viewType);
-      
+
       if (existing.length) {
         this.app.workspace.revealLeaf(existing[0]);
         return;
       }
-  
+
       await this.app.workspace.getRightLeaf(false).setViewState({
         type: CrossbowView.viewType,
         active: true,
       });
-  
+
       this.app.workspace.revealLeaf(
         this.app.workspace.getLeavesOfType(CrossbowView.viewType)[0],
       );
@@ -85,30 +85,30 @@ export default class CrossbowPlugin extends Plugin {
 
     // Settings-tab to configure crossbow
     this.addSettingTab(new CrossbowSettingTab(this.app, this));
-    
+
     // Register event handlers
     this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
     this.registerEvent(this.app.metadataCache.on('changed', this.onMetadataChange));
 
-    debugLog('Crossbow is ready.');
+    crossbowLogger.debugLog('Crossbow is ready.');
   }
 
   public onunload = () => {
     Object.assign(this.crossbowCache, {});
 
     this.getCrossbowView().unload()
-    debugLog('Unloaded Crossbow.');
+    crossbowLogger.debugLog('Unloaded Crossbow.');
   }
 
-  public loadSettings = async() => this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  public loadSettings = async () => this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
-  public loadDefaultSettings = async() => this.settings = DEFAULT_SETTINGS;
+  public loadDefaultSettings = async () => this.settings = DEFAULT_SETTINGS;
 
-  public saveSettings = async() => await this.saveData(this.settings);
+  public saveSettings = async () => await this.saveData(this.settings);
 
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata) => {
     this.updateCrossbowCacheEntitiesOfFile(file, cache);
-    debugLog(`Metadata cache updated for ${file.basename}.`);
+    crossbowLogger.debugLog(`Metadata cache updated for ${file.basename}.`);
 
     if (this.updateTimeout)
       clearTimeout(this.updateTimeout)
@@ -122,7 +122,7 @@ export default class CrossbowPlugin extends Plugin {
     const prevCurrentFile = this._currentFile;
 
     this.setActiveEditorAndFile()
-    debugLog('File opened.');
+    crossbowLogger.debugLog('File opened.');
 
     if (this.updateTimeout)
       clearTimeout(this.updateTimeout)
@@ -227,6 +227,6 @@ export default class CrossbowPlugin extends Plugin {
       this._currentFile = leaf.view.file;
     }
     else
-      warn('Unable to determine current editor.');
+      crossbowLogger.warn('Unable to determine current editor.');
   }
 }

@@ -1,4 +1,3 @@
-import { CrossbowSuggestion } from "main";
 import { Editor, EditorPosition } from "obsidian";
 import { stripMarkdown } from "./util";
 
@@ -14,13 +13,13 @@ Editor.prototype.getWordLookup = function (): { [key: string]: EditorPosition[] 
   // Split the plain text into word-objects, which contain the word and its position in the editor
   const words: { word: string, pos: EditorPosition }[] = []
   for (let i = 0; i < plainText.length; i++) {
-    if (plainText[i].match(/\s/)) 
+    if (plainText[i].match(/\s/))
       continue
     else {
       let word = ''
       let pos = this.offsetToPos(i)
 
-      while (plainText[i] && !plainText[i].match(/\s/)) 
+      while (plainText[i] && !plainText[i].match(/\s/))
         word += plainText[i++]
 
       words.push({ word, pos })
@@ -31,15 +30,15 @@ Editor.prototype.getWordLookup = function (): { [key: string]: EditorPosition[] 
   const filteredWords = words
     .filter(w => {
       if (w.word.length <= 0)
-      return false
+        return false
       if (w.word.startsWith('[[') && w.word.endsWith(']]'))
-      return false
+        return false
       if (w.word.startsWith('#'))
-      return false
-      
+        return false
+
       return true
     });
-  
+
   // Create a lookup table for the words, where the key is the word and the value is an array of positions (occurrences of the word)
   const wordLookup: { [key: string]: EditorPosition[] } = {}
   for (let i = 0; i < filteredWords.length; i++) {

@@ -4,7 +4,7 @@ import {
   ItemView,
   WorkspaceLeaf,
 } from 'obsidian';
-import { warn, debugLog } from '../util';
+import { crossbowLogger } from '../util';
 import { TreeItem, TreeItemLeaf } from './treeItem';
 
 type LeafTreeItem = TreeItemLeaf<CrossbowCacheMatch>
@@ -43,11 +43,11 @@ export class CrossbowView extends ItemView {
 
   public clear = (): void => this.contentEl.empty();
 
-  private getCurrentSuggestionTreeItems = (): SuggestionTreeItem[] => 
+  private getCurrentSuggestionTreeItems = (): SuggestionTreeItem[] =>
     this.contentEl.children.length > 0 ? Array.from(this.contentEl.children) as SuggestionTreeItem[] : [];
 
   private arrayCompare = <TOld, TNew>(old: TOld[], _new: TNew[], hashGetterOld: (inp: TOld) => string, hashGetterNew: (inp: TNew) => string): { onlyInOld: TOld[], onlyInNew: TNew[], inBoth: { old: TOld, _new: TNew }[] } => {
-    const map: { [key: string]: { old?: TOld, _new?: TNew }} = {};
+    const map: { [key: string]: { old?: TOld, _new?: TNew } } = {};
 
     for (let i = 0; i < old.length; i++) {
       const key = hashGetterOld(old[i]);
@@ -70,22 +70,22 @@ export class CrossbowView extends ItemView {
         onlyInOld.push(value.old);
       else if (!value.old && value._new)
         onlyInNew.push(value._new);
-      else 
+      else
         throw new Error("Inconsistent Data");
     });
 
     return { onlyInOld, onlyInNew, inBoth };
   }
 
-  public updateSuggestions = (suggestions: CrossbowSuggestion[], fileHasChanged: boolean) => { 
-    debugLog(`${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
-    
+  public updateSuggestions = (suggestions: CrossbowSuggestion[], fileHasChanged: boolean) => {
+    crossbowLogger.debugLog(`${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
+
     const occurrenceHash = (o: EditorPosition) => o.line + ":" + o.ch;
     const matchHash = (o: CrossbowCacheMatch) => o.file.path;
     const compareSuggestion = (a: CrossbowSuggestion, b: CrossbowSuggestion) => a.word === b.word;
 
     const currentSuggestionTreeItems = this.getCurrentSuggestionTreeItems()
-    
+
     if (fileHasChanged) {
       this.clear();
     }
@@ -100,10 +100,10 @@ export class CrossbowView extends ItemView {
     suggestions.forEach((suggestion, index) => {
       // Find if this treeItem already exists
       const existingSuggestionTreeItemIndex = currentSuggestionTreeItems.findIndex(item => compareSuggestion(item.data, suggestion));
-      const existingSuggestionTreeItem = existingSuggestionTreeItemIndex !== -1 ? 
-        currentSuggestionTreeItems.splice(existingSuggestionTreeItemIndex, 1)[0] : 
+      const existingSuggestionTreeItem = existingSuggestionTreeItemIndex !== -1 ?
+        currentSuggestionTreeItems.splice(existingSuggestionTreeItemIndex, 1)[0] :
         undefined;
-      
+
       if (existingSuggestionTreeItem) {
         // Check if we need to update occurrences
         const existingOccurrenceTreeItems = existingSuggestionTreeItem.getChildren();
@@ -114,8 +114,8 @@ export class CrossbowView extends ItemView {
         const matchesDiff = this.arrayCompare(existingMatches, suggestion.matches, match => matchHash(match), match => matchHash(match));
 
         // States
-        const needToUpdateMatches = 
-          matchesDiff.onlyInNew.length !== 0 || 
+        const needToUpdateMatches =
+          matchesDiff.onlyInNew.length !== 0 ||
           matchesDiff.onlyInOld.length !== 0 ||
           matchesDiff.inBoth.length !== existingMatches.length;
 
@@ -141,16 +141,16 @@ export class CrossbowView extends ItemView {
       else {
         const ranks = new Set<CrossbowCacheMatch['rank']>();
         suggestion.matches.forEach(match => ranks.add(match.rank));
-    
+
         const availableMatchRanks = Array.from(ranks).sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!).join('');
-    
+
         const suggestionTreeItem = new TreeItem<CrossbowSuggestion, TreeItem<EditorPosition, TreeItemLeaf<CrossbowCacheMatch>>>(suggestion, data => data.word);
         suggestionTreeItem.addFlair(availableMatchRanks);
         suggestionTreeItem.addTextSuffix(`(${suggestion.occurrences.length.toString()})`);
 
         // Insert index, so we keep the sorted order
         this.contentEl.insertBefore(suggestionTreeItem, this.contentEl.children[index]);
-      
+
         // Occurrences
         suggestion.occurrences.forEach(occurrence => {
           const occurrenceItem = this.createOccurrenceTreeItem(suggestionTreeItem, occurrence);
@@ -203,8 +203,8 @@ export class CrossbowView extends ItemView {
             .forEach(ti => ti.setDisable());
 
           const occurrenceEnd = { ch: occurrenceTreeItem.data.ch + suggestion.word.length, line: occurrenceTreeItem.data.line } as EditorPosition
-          const link = match.item ? 
-            this.app.fileManager.generateMarkdownLink(match.file, match.text, "#" + match.text, suggestion.word) : 
+          const link = match.item ?
+            this.app.fileManager.generateMarkdownLink(match.file, match.text, "#" + match.text, suggestion.word) :
             this.app.fileManager.generateMarkdownLink(match.file, match.text, undefined, suggestion.word);
 
           this.crossbow.currentEditor.replaceRange(link, occurrenceTreeItem.data, occurrenceEnd);
@@ -212,7 +212,7 @@ export class CrossbowView extends ItemView {
 
         // Go to source action
         matchItem.addButton("Source", 'lucide-search', () => {
-          warn("Go To Source is not yet implemented");
+          crossbowLogger.warn("Go To Source is not yet implemented");
         });
 
         occurrenceTreeItem.addChild(matchItem);

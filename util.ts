@@ -27,7 +27,7 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
   options.abbr = options.hasOwnProperty('abbr') ? options.abbr : undefined;
   options.replaceLinksWithUrl = options.hasOwnProperty('replaceLinksWithURL') ? options.replaceLinksWithUrl : true;
   options.htmlTagsToSkip = options.hasOwnProperty('htmlTagsToSkip') ? options.htmlTagsToSkip : [];
-  
+
   var output = md || '';
 
   // Remove horizontal rules (stripListHeaders conflict with this rule, which is why it has been moved to the top)
@@ -42,7 +42,7 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
     }
     if (options.gfm) {
       output = output
-      // Header
+        // Header
         .replace(/\n={2,}/g, '\n')
         // Fenced codeblocks
         .replace(/~{3}.*\n/g, '')
@@ -56,7 +56,7 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
       output = output.replace(/\*\[.*\]:.*\n/, '');
     }
     output = output
-    // Remove HTML tags
+      // Remove HTML tags
       .replace(/<[^>]*>/g, '')
 
     var htmlReplaceRegex = new RegExp('<[^>]*>', 'g');
@@ -66,10 +66,10 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
 
       // Adding the lookahead literal with the default regex for html. Eg./<(?!sup|sub)[^>]*>/ig
       htmlReplaceRegex = new RegExp(
-          '<' +
-          joinedHtmlTagsToSkip +
-          '[^>]*>', 
-          'ig'
+        '<' +
+        joinedHtmlTagsToSkip +
+        '[^>]*>',
+        'ig'
       );
     }
 
@@ -108,7 +108,7 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
       // .replace(/(\S+)\n\s*(\S+)/g, '$1 $2')
       // Replace strike through
       .replace(/~(.*?)~/g, '$1');
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     return md;
   }
@@ -116,5 +116,8 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
 };
 
 const crossbowLogPrefix = '🏹: ';
-export const debugLog = (message: string) => process.env.NODE_ENV === 'development' && console.log(`${crossbowLogPrefix}${message}`);
-export const warn = (message: string) => console.warn(`${crossbowLogPrefix}${message}`);
+
+export const crossbowLogger = {
+  debugLog: (message: string) => process.env.NODE_ENV === 'development' && console.log(`${crossbowLogPrefix}${message}`),
+  warn: (message: string) => console.warn(`${crossbowLogPrefix}${message}`),
+}
