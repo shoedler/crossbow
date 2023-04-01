@@ -4,7 +4,6 @@ import {
   ItemView,
   WorkspaceLeaf,
 } from 'obsidian';
-import { crossbowLogger } from '../util';
 import { TreeItem, TreeItemLeaf } from './treeItem';
 
 type LeafTreeItem = TreeItemLeaf<CrossbowCacheMatch>
@@ -78,7 +77,7 @@ export class CrossbowView extends ItemView {
   }
 
   public updateSuggestions = (suggestions: CrossbowSuggestion[], fileHasChanged: boolean) => {
-    crossbowLogger.debugLog(`${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
+    this.crossbow.debugLog(`${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
 
     const occurrenceHash = (o: EditorPosition) => o.line + ":" + o.ch;
     const matchHash = (o: CrossbowCacheMatch) => o.file.path;
@@ -211,8 +210,8 @@ export class CrossbowView extends ItemView {
         });
 
         // Go to source action
-        matchItem.addButton("Source", 'lucide-search', () => {
-          crossbowLogger.warn("Go To Source is not yet implemented");
+        matchItem.addButton("Go To Source", 'lucide-search', () => {
+          console.warn("🏹: 'Go To Source' is not yet implemented");
         });
 
         occurrenceTreeItem.addChild(matchItem);

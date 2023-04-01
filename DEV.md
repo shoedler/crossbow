@@ -5,6 +5,7 @@
 
 * [x] General UX Improvement
 * [ ] Add "Goto Source" action on suggestions
+* [ ] Fix occurrences hint not being updated when new occurrences are found
 
 ## Refactors
 

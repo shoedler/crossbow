@@ -47,6 +47,13 @@ export class CrossbowSettingTab extends PluginSettingTab {
           else
             await this.updateSettingValue('suggestedReferencesMinimumWordLength', parseInt(value, 10));
         }));
+
+    new Setting(containerEl)
+      .setName('Enable logging')
+      .setDesc('If checked, debug logs will be printed to the console')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.useLogging)
+        .onChange(async value => await this.updateSettingValue('useLogging', value)));
   }
 
   private updateSettingValue = async <K extends keyof CrossbowPluginSettings>(key: K, value: CrossbowPluginSettings[K]) => {

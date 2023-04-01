@@ -2,7 +2,6 @@ import { CrossbowView } from 'view/view';
 import { registerCrossbowIcons } from 'icons';
 import { CacheItem, Editor, MarkdownView, Plugin, TFile, EditorPosition, CachedMetadata } from 'obsidian';
 import { CrossbowSettingTab } from './settings';
-import { crossbowLogger } from './util';
 import './editorExtension';
 
 export interface CrossbowPluginSettings {
@@ -10,6 +9,8 @@ export interface CrossbowPluginSettings {
   suggestReferencesInSameFile: boolean;
   ignoreSuggestionsWhichStartWithLowercaseLetter: boolean;
   suggestedReferencesMinimumWordLength: number;
+
+  useLogging: boolean;
 }
 
 const DEFAULT_SETTINGS: CrossbowPluginSettings = {
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: CrossbowPluginSettings = {
   suggestReferencesInSameFile: false,
   ignoreSuggestionsWhichStartWithLowercaseLetter: true,
   suggestedReferencesMinimumWordLength: 3,
+  useLogging: false,
 }
 
 export interface CrossbowCacheEntity {
@@ -90,14 +92,14 @@ export default class CrossbowPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
     this.registerEvent(this.app.metadataCache.on('changed', this.onMetadataChange));
 
-    crossbowLogger.debugLog('Crossbow is ready.');
+    this.debugLog('Crossbow is ready.');
   }
 
   public onunload = () => {
     Object.assign(this.crossbowCache, {});
 
     this.getCrossbowView().unload()
-    crossbowLogger.debugLog('Unloaded Crossbow.');
+    this.debugLog('Unloaded Crossbow.');
   }
 
   public loadSettings = async () => this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -106,9 +108,11 @@ export default class CrossbowPlugin extends Plugin {
 
   public saveSettings = async () => await this.saveData(this.settings);
 
+  public debugLog = (message: string) => this.settings.useLogging && console.log(`🏹: ${message}`);
+
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata) => {
     this.updateCrossbowCacheEntitiesOfFile(file, cache);
-    crossbowLogger.debugLog(`Metadata cache updated for ${file.basename}.`);
+    this.debugLog(`Metadata cache updated for ${file.basename}.`);
 
     if (this.updateTimeout)
       clearTimeout(this.updateTimeout)
@@ -122,7 +126,7 @@ export default class CrossbowPlugin extends Plugin {
     const prevCurrentFile = this._currentFile;
 
     this.setActiveEditorAndFile()
-    crossbowLogger.debugLog('File opened.');
+    this.debugLog('File opened.');
 
     if (this.updateTimeout)
       clearTimeout(this.updateTimeout)
@@ -227,6 +231,6 @@ export default class CrossbowPlugin extends Plugin {
       this._currentFile = leaf.view.file;
     }
     else
-      crossbowLogger.warn('Unable to determine current editor.');
+      console.warn('🏹: Unable to determine current editor.');
   }
 }
