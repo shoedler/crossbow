@@ -7,13 +7,14 @@ With that, your knowledge graph will gain some desperatly needed edges - it'll b
 ## How to use
 
 Just open the crossbow sidebar by clicking on the crossbow icon. All the suggestions will appear within the sidebar.
-Clicking on an entry will navigate to the word occurance in the currently open editor.
 
-## IMAGE
+### Applying suggestions
 
-By clicking on a suggestion within the entry, crossbow will insert a link with the appropriate displayname.
+Clicking on a suggestion in the sidebar will show you a list of occurences of the word in the current note.
+Clicking on one of the occurences will show you a list of links (matches) that you can apply to the word. These matches
+are ranked, based on the quality of the match.
 
-## IMAGE
+You can apply a match by clicking the appropriate icon next to the match. 
 
 ## How to install
 
@@ -34,8 +35,8 @@ By clicking on a suggestion within the entry, crossbow will insert a link with t
 
 ### Refactors
 
+* [ ] Refactor handling / updating of `TreeItem`s. Use a reactive approach instead of manually updating the tree.
 * [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax operators)
-* [ ] Fix `TreeItemLeaf.setText()` to be called in the base class on initialization, instead of calling it separately in all derived classes
 * [ ] Move `register()` to the `TreeItemLeaf` base class and require derivatives to implement it.
 
 ### Releasing new releases

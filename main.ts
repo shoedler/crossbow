@@ -37,8 +37,6 @@ export class CrossbowSuggestion {
 
 export default class CrossbowPlugin extends Plugin {
   public settings: CrossbowPluginSettings;
-  private view: CrossbowView;
-
   private _currentEditor: Editor;
   public get currentEditor(): Editor { return this._currentEditor; } 
   private _currentFile: TFile;
@@ -56,7 +54,7 @@ export default class CrossbowPlugin extends Plugin {
 
   public runWithoutCacheUpdate = (fileHasChanged: boolean) => {
     const data = this.getCrossbowSuggestionsInCurrentEditor();
-    this.view.updateSuggestions(data, fileHasChanged);
+    this.getCrossbowView()?.updateSuggestions(data, fileHasChanged);
   }
 
   public onload = async () => {
@@ -64,7 +62,7 @@ export default class CrossbowPlugin extends Plugin {
 
     // Register view elements
     registerCrossbowIcons()
-    this.registerView(CrossbowView.viewType, leaf => (this.view = new CrossbowView(leaf, this)));
+    this.registerView(CrossbowView.viewType, leaf => new CrossbowView(leaf, this));
 
     // Ribbon icon to access the crossbow pane
     this.addRibbonIcon('crossbow', 'Crossbow', async (ev: MouseEvent) => {
@@ -87,44 +85,18 @@ export default class CrossbowPlugin extends Plugin {
 
     // Settings-tab to configure crossbow
     this.addSettingTab(new CrossbowSettingTab(this.app, this));
-
-    // Evenhandler for file-open events
-    this.app.workspace.on('file-open', () => {
-      const prevCurrentFile = this._currentFile;
-
-      this.setActiveEditorAndFile()
-      debugLog('File opened.');
-      
-      if (this.updateTimeout) 
-        clearTimeout(this.updateTimeout)
-
-      this.updateTimeout = setTimeout(() => {
-        if (!prevCurrentFile)
-          this.runWithCacheUpdate(true); // Initial run
-        else if (this._currentFile !== prevCurrentFile)
-          this.runWithoutCacheUpdate(true) // Opened a different file
-      }, 200);
-    })
-
-    // Eventhandler for metadata cache updates
-    this.app.metadataCache.on('changed', (file, data, cache) => {
-      this.updateCrossbowCacheEntitiesOfFile(file, cache);
-      debugLog(`Metadata cache updated for ${file.basename}.`);
-
-      if (this.updateTimeout)
-        clearTimeout(this.updateTimeout)
-
-      this.updateTimeout = setTimeout(() => {
-        this.runWithoutCacheUpdate(false)
-      }, 700);
-    })
+    
+    // Register event handlers
+    this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
+    this.registerEvent(this.app.metadataCache.on('changed', this.onMetadataChange));
 
     debugLog('Crossbow is ready.');
   }
 
   public onunload = () => {
     Object.assign(this.crossbowCache, {});
-    this.view.unload()
+
+    this.getCrossbowView().unload()
     debugLog('Unloaded Crossbow.');
   }
 
@@ -134,6 +106,36 @@ export default class CrossbowPlugin extends Plugin {
 
   public saveSettings = async() => await this.saveData(this.settings);
 
+  private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata) => {
+    this.updateCrossbowCacheEntitiesOfFile(file, cache);
+    debugLog(`Metadata cache updated for ${file.basename}.`);
+
+    if (this.updateTimeout)
+      clearTimeout(this.updateTimeout)
+
+    this.updateTimeout = setTimeout(() => {
+      this.runWithoutCacheUpdate(false)
+    }, 700);
+  }
+
+  private onFileOpen = () => {
+    const prevCurrentFile = this._currentFile;
+
+    this.setActiveEditorAndFile()
+    debugLog('File opened.');
+
+    if (this.updateTimeout)
+      clearTimeout(this.updateTimeout)
+
+    this.updateTimeout = setTimeout(() => {
+      if (!prevCurrentFile)
+        this.runWithCacheUpdate(true); // Initial run
+      else if (this._currentFile !== prevCurrentFile)
+        this.runWithoutCacheUpdate(true) // Opened a different file
+    }, 200);
+  }
+
+  private getCrossbowView = (): CrossbowView => app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
 
   private addOrUpdateCacheEntity = (entity: CrossbowCacheEntity) => this.crossbowCache[entity.text] = entity;
 

@@ -1,4 +1,4 @@
-import { ButtonComponent } from "obsidian";
+import { ButtonComponent, getIcon } from "obsidian";
 
 export class TreeItemLeaf<TData> extends HTMLElement {
   private readonly inner: HTMLDivElement;
@@ -70,16 +70,11 @@ export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemL
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
 
-    this.childrenWrapper = document.createElement('div');
-    this.childrenWrapper.addClass('tree-item-children');
+    this.childrenWrapper = createEl('div', { cls: 'tree-item-children'});
     this.childrenWrapper.style.display = 'none';
 
-    this.iconWrapper = document.createElement('div');
-    this.iconWrapper.addClass('tree-item-icon', 'collapse-icon');
-    this.iconWrapper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle">
-      <path d="M3 8L12 17L21 8"></path>
-    </svg>
-    `;
+    this.iconWrapper = createEl('div', { cls: ['tree-item-icon', 'collapse-icon']})
+    this.iconWrapper.appendChild(getIcon('right-triangle')!);
 
     this.appendChild(this.childrenWrapper);
     this.mainWrapper.prepend(this.iconWrapper);
