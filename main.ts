@@ -2,6 +2,7 @@ import { CrossbowView } from 'view/view';
 import { registerCrossbowIcons } from 'icons';
 import { CacheItem, Editor, MarkdownView, Plugin, TFile, EditorPosition, CachedMetadata } from 'obsidian';
 import { CrossbowSettingTab } from './settings';
+import { debugLog, warn } from './util';
 import './editorExtension';
 
 export interface CrossbowPluginSettings {
@@ -43,102 +44,9 @@ export default class CrossbowPlugin extends Plugin {
   private _currentFile: TFile;
   public get currentFile(): TFile { return this._currentFile; }
 
-  private timeout: NodeJS.Timeout
+  private updateTimeout: ReturnType<typeof setTimeout>;
 
   private readonly crossbowCache: CrossbowCache = {}
-
-  private addOrUpdateCacheEntity = (entity: CrossbowCacheEntity) => this.crossbowCache[entity.text] = entity;
-  
-  private getCrossbowSuggestionsInCurrentEditor = (): CrossbowSuggestion[] => {
-    const result: CrossbowSuggestion[] = [];
-    const wordLookup = this.currentEditor.getWordLookup();
-
-    Object.entries(wordLookup).forEach(entry => {
-      const [word, occurrences] = entry;
-      const matchSet: Set<CrossbowCacheMatch> = new Set();
-
-      // Find matches 
-      Object.keys(this.crossbowCache).forEach(crossbowCacheKey => {
-        // If we have a complete match, we always add it, even if it does not satisfy the filters. Say we have a chapter with a heading 'C' (the programming language)
-        // We do want to match a word 'C' in the current editor.
-        if (crossbowCacheKey === word) {
-          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🏆' });
-          return;
-        }
-        if (crossbowCacheKey.toLowerCase() === word.toLowerCase()) {
-          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🥇' });
-          return;
-        }
-
-        // Hard-filters on words of current editor:
-        // If the word is too short, skip
-        if (word.length <= 3)
-          return;
-        if (this.settings.ignoredWords.includes(word)) 
-          return;
-      
-        // Hard-filters on cache keys:
-        // If the cache key is too short, skip
-        if (crossbowCacheKey.length <= this.settings.suggestedReferencesMinimumWordLength)
-          return;
-        // If reference is in the same file, and we don't want to suggest references in the same file, skip
-        if (!this.settings.suggestReferencesInSameFile && this.crossbowCache[crossbowCacheKey].file === this._currentFile)
-          return;
-        // If the word is not a substring of the key or the key is not a substring of the word, skip
-        if ((crossbowCacheKey.toLowerCase().includes(word.toLowerCase()) || word.toLowerCase().includes(crossbowCacheKey.toLowerCase())) === false)
-          return;
-        // If the word does not start with an uppercase letter, skip
-        if (this.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && (word.charCodeAt(0) === word.charAt(0).toLowerCase().charCodeAt(0)))
-          return;
-
-        // Soft-filters:
-        // If the lengths differ too much, add as not-very-good suggestion
-        if ((1 / crossbowCacheKey.length * word.length) <= 0.2) {
-          matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: '🥉' });
-          return;
-        }
-
-        matchSet.add({...this.crossbowCache[crossbowCacheKey], rank: '🥈' });
-      })
-  
-      const matches = Array.from(matchSet);
-
-      if (matches.length > 0) {
-        result.push({ word, occurrences, matches });
-      }
-    })
-
-    return result;
-  }
-
-  // 'cache' can be passed in, if this is called from an event handler which already has the cache
-  // This will prevent the cache from being retrieved twice
-  private updateCrossbowCacheEntitiesOfFile = (file: TFile, cache?: CachedMetadata) => {
-    if (file.extension !== 'md')
-      return;
-
-    const metadata = cache? cache : app.metadataCache.getFileCache(file);		
-
-    if (file.basename.length >= this.settings.suggestedReferencesMinimumWordLength) 
-      this.addOrUpdateCacheEntity({ file, text: file.basename });
-  
-    if (metadata) {
-      if (metadata.headings) 
-        metadata.headings.forEach(headingCache => this.addOrUpdateCacheEntity({ item: headingCache, file, text: headingCache.heading }));
-      if (metadata.tags) 
-        metadata.tags.forEach(tagCache => this.addOrUpdateCacheEntity({ item: tagCache, file, text: tagCache.tag }));
-    }
-  }
-
-  private setActiveEditorAndFile = (): void => {
-    const leaf = this.app.workspace.getMostRecentLeaf();
-    if (leaf?.view instanceof MarkdownView) {
-      this._currentEditor = leaf.view.editor;
-      this._currentFile = leaf.view.file;
-    }
-    else
-      console.warn('🏹: Unable to determine current editor.');
-  }
 
   public runWithCacheUpdate = (fileHasChanged: boolean) => {
     const files = this.app.vault.getFiles();
@@ -185,40 +93,138 @@ export default class CrossbowPlugin extends Plugin {
       const prevCurrentFile = this._currentFile;
 
       this.setActiveEditorAndFile()
-      console.log('🏹: File opened.');
+      debugLog('File opened.');
       
-      if (this.timeout) 
-        clearTimeout(this.timeout)
+      if (this.updateTimeout) 
+        clearTimeout(this.updateTimeout)
 
-      this.timeout = setTimeout(() => {
+      this.updateTimeout = setTimeout(() => {
         if (!prevCurrentFile)
           this.runWithCacheUpdate(true); // Initial run
         else if (this._currentFile !== prevCurrentFile)
-          this.runWithoutCacheUpdate(true) // File has changed
+          this.runWithoutCacheUpdate(true) // Opened a different file
       }, 200);
     })
 
     // Eventhandler for metadata cache updates
     this.app.metadataCache.on('changed', (file, data, cache) => {
       this.updateCrossbowCacheEntitiesOfFile(file, cache);
-      console.log(`🏹: Metadata cache updated for ${file.basename}.`);
+      debugLog(`Metadata cache updated for ${file.basename}.`);
 
-      if (this.timeout)
-        clearTimeout(this.timeout)
+      if (this.updateTimeout)
+        clearTimeout(this.updateTimeout)
 
-      this.runWithoutCacheUpdate(false)
+      this.updateTimeout = setTimeout(() => {
+        this.runWithoutCacheUpdate(false)
+      }, 700);
     })
 
-    console.log('🏹: Crossbow is ready.');
+    debugLog('Crossbow is ready.');
   }
 
   public onunload = () => {
     Object.assign(this.crossbowCache, {});
     this.view.unload()
-    console.log('🏹: Crossbow is unloaded.');
+    debugLog('Unloaded Crossbow.');
   }
 
   public loadSettings = async() => this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
+  public loadDefaultSettings = async() => this.settings = DEFAULT_SETTINGS;
+
   public saveSettings = async() => await this.saveData(this.settings);
+
+
+  private addOrUpdateCacheEntity = (entity: CrossbowCacheEntity) => this.crossbowCache[entity.text] = entity;
+
+  private getCrossbowSuggestionsInCurrentEditor = (): CrossbowSuggestion[] => {
+    const result: CrossbowSuggestion[] = [];
+    const wordLookup = this.currentEditor.getWordLookup();
+
+    Object.entries(wordLookup).forEach(entry => {
+      const [word, occurrences] = entry;
+      const matchSet: Set<CrossbowCacheMatch> = new Set();
+
+      // Find matches 
+      Object.keys(this.crossbowCache).forEach(crossbowCacheKey => {
+        // If we have a complete match, we always add it, even if it does not satisfy the filters. Say we have a chapter with a heading 'C' (the programming language)
+        // We do want to match a word 'C' in the current editor.
+        if (crossbowCacheKey === word) {
+          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🏆' });
+          return;
+        }
+        if (crossbowCacheKey.toLowerCase() === word.toLowerCase()) {
+          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🥇' });
+          return;
+        }
+
+        // Hard-filters on words of current editor:
+        // If the word is too short, skip
+        if (word.length <= 3)
+          return;
+        if (this.settings.ignoredWords.includes(word))
+          return;
+
+        // Hard-filters on cache keys:
+        // If the cache key is too short, skip
+        if (crossbowCacheKey.length <= this.settings.suggestedReferencesMinimumWordLength)
+          return;
+        // If reference is in the same file, and we don't want to suggest references in the same file, skip
+        if (!this.settings.suggestReferencesInSameFile && this.crossbowCache[crossbowCacheKey].file === this._currentFile)
+          return;
+        // If the word is not a substring of the key or the key is not a substring of the word, skip
+        if ((crossbowCacheKey.toLowerCase().includes(word.toLowerCase()) || word.toLowerCase().includes(crossbowCacheKey.toLowerCase())) === false)
+          return;
+        // If the word does not start with an uppercase letter, skip
+        if (this.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && (word.charCodeAt(0) === word.charAt(0).toLowerCase().charCodeAt(0)))
+          return;
+
+        // Soft-filters:
+        // If the lengths differ too much, add as not-very-good suggestion
+        if ((1 / crossbowCacheKey.length * word.length) <= 0.2) {
+          matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🥉' });
+          return;
+        }
+
+        matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🥈' });
+      })
+
+      const matches = Array.from(matchSet);
+
+      if (matches.length > 0) {
+        result.push({ word, occurrences, matches });
+      }
+    })
+
+    return result;
+  }
+
+  // 'cache' can be passed in, if this is called from an event handler which already has the cache
+  // This will prevent the cache from being retrieved twice
+  private updateCrossbowCacheEntitiesOfFile = (file: TFile, cache?: CachedMetadata) => {
+    if (file.extension !== 'md')
+      return;
+
+    const metadata = cache ? cache : app.metadataCache.getFileCache(file);
+
+    if (file.basename.length >= this.settings.suggestedReferencesMinimumWordLength)
+      this.addOrUpdateCacheEntity({ file, text: file.basename });
+
+    if (metadata) {
+      if (metadata.headings)
+        metadata.headings.forEach(headingCache => this.addOrUpdateCacheEntity({ item: headingCache, file, text: headingCache.heading }));
+      if (metadata.tags)
+        metadata.tags.forEach(tagCache => this.addOrUpdateCacheEntity({ item: tagCache, file, text: tagCache.tag }));
+    }
+  }
+
+  private setActiveEditorAndFile = (): void => {
+    const leaf = this.app.workspace.getMostRecentLeaf();
+    if (leaf?.view instanceof MarkdownView) {
+      this._currentEditor = leaf.view.editor;
+      this._currentFile = leaf.view.file;
+    }
+    else
+      warn('Unable to determine current editor.');
+  }
 }

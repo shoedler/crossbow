@@ -114,3 +114,7 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
   }
   return output;
 };
+
+const crossbowLogPrefix = '🏹: ';
+export const debugLog = (message: string) => process.env.NODE_ENV === 'development' && console.log(`${crossbowLogPrefix}${message}`);
+export const warn = (message: string) => console.warn(`${crossbowLogPrefix}${message}`);

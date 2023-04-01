@@ -4,6 +4,7 @@ import {
   ItemView,
   WorkspaceLeaf,
 } from 'obsidian';
+import { warn, debugLog } from '../util';
 import { TreeItem, TreeItemLeaf } from './treeItem';
 
 type LeafTreeItem = TreeItemLeaf<CrossbowCacheMatch>
@@ -77,13 +78,13 @@ export class CrossbowView extends ItemView {
   }
 
   public updateSuggestions = (suggestions: CrossbowSuggestion[], fileHasChanged: boolean) => { 
-    console.log(`🏹: ${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
+    debugLog(`${fileHasChanged ? "Clearing & adding" : "Updating"} suggestions`);
     
     const occurrenceHash = (o: EditorPosition) => o.line + ":" + o.ch;
     const matchHash = (o: CrossbowCacheMatch) => o.file.path;
     const compareSuggestion = (a: CrossbowSuggestion, b: CrossbowSuggestion) => a.word === b.word;
 
-    const currentSuggestionTreeItems = this.getCurrentSuggestionTreeItems();
+    const currentSuggestionTreeItems = this.getCurrentSuggestionTreeItems()
     
     if (fileHasChanged) {
       this.clear();
@@ -96,16 +97,14 @@ export class CrossbowView extends ItemView {
       suggestion.matches.sort((a, b) => a.rank.codePointAt(0)! - b.rank.codePointAt(0)!);
     });
 
-    suggestions.forEach(suggestion => {
+    suggestions.forEach((suggestion, index) => {
       // Find if this treeItem already exists
-      const existingSuggestionTreeItem = currentSuggestionTreeItems.find(item => compareSuggestion(item.data, suggestion));
+      const existingSuggestionTreeItemIndex = currentSuggestionTreeItems.findIndex(item => compareSuggestion(item.data, suggestion));
+      const existingSuggestionTreeItem = existingSuggestionTreeItemIndex !== -1 ? 
+        currentSuggestionTreeItems.splice(existingSuggestionTreeItemIndex, 1)[0] : 
+        undefined;
       
       if (existingSuggestionTreeItem) {
-        // TODO: Save "collapsed" states of TreeItems, then remove the ones we need to update, and re-add them with the same collapsed state
-        // TODO: Remove 'arrayCompare' and all uses.
-        // const wasCollapsed = existingSuggestionTreeItem.isCollapsed();
-        // const occurrencesWhichWereCollapsed = existingSuggestionTreeItem.getChildren().filter(item => item.isCollapsed());
-
         // Check if we need to update occurrences
         const existingOccurrenceTreeItems = existingSuggestionTreeItem.getChildren();
         const occurrencesDiff = this.arrayCompare(existingOccurrenceTreeItems, suggestion.occurrences, item => occurrenceHash(item.data), occ => occurrenceHash(occ));
@@ -149,7 +148,8 @@ export class CrossbowView extends ItemView {
         suggestionTreeItem.addFlair(availableMatchRanks);
         suggestionTreeItem.addTextSuffix(`(${suggestion.occurrences.length.toString()})`);
 
-        this.contentEl.appendChild(suggestionTreeItem);
+        // Insert index, so we keep the sorted order
+        this.contentEl.insertBefore(suggestionTreeItem, this.contentEl.children[index]);
       
         // Occurrences
         suggestion.occurrences.forEach(occurrence => {
@@ -157,8 +157,10 @@ export class CrossbowView extends ItemView {
           this.createMatchTreeItemLeafes(occurrenceItem, suggestion);
         });
       }
-
     });
+
+    // Now, we're left with the items that we need to remove
+    currentSuggestionTreeItems.forEach(item => item.remove());
   }
 
   private createOccurrenceTreeItem = (suggestionTreeItem: SuggestionTreeItem, occurrence: EditorPosition) => {
@@ -210,7 +212,7 @@ export class CrossbowView extends ItemView {
 
         // Go to source action
         matchItem.addButton("Source", 'lucide-search', () => {
-          console.warn("🏹: Go To Source is not yet implemented");
+          warn("Go To Source is not yet implemented");
         });
 
         occurrenceTreeItem.addChild(matchItem);

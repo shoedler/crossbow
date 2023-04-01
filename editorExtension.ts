@@ -1,6 +1,6 @@
 import { CrossbowSuggestion } from "main";
 import { Editor, EditorPosition } from "obsidian";
-import { stripMarkdown } from "stripMarkdown";
+import { stripMarkdown } from "./util";
 
 declare module "obsidian" {
   interface Editor {
