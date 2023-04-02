@@ -1,16 +1,17 @@
 import { ButtonComponent, getIcon } from "obsidian";
 
-export class TreeItemLeaf<TData> extends HTMLElement {
-  private readonly inner: HTMLDivElement;
-  private readonly suffix: HTMLSpanElement;
-  private readonly flair: HTMLSpanElement;
-  private readonly buttons: ButtonComponent[] = [];
-  protected readonly mainWrapper: HTMLDivElement;
-  protected readonly flairWrapper: HTMLDivElement;
-  public readonly data: TData;
+export abstract class TreeItemBase<TData> extends HTMLElement {
+  private inner: HTMLDivElement;
+  private suffix: HTMLSpanElement;
+  private flair: HTMLSpanElement;
+  private buttons: ButtonComponent[] = [];
+  protected mainWrapper: HTMLDivElement;
+  protected flairWrapper: HTMLDivElement;
+  public readonly value: TData;
 
-  constructor(data: TData, textGetter: (data: TData) => string) {
+  constructor(value: TData) {
     super();
+    this.value = value;
 
     this.addClass("tree-item");
     this.mainWrapper = this.createDiv({ cls: 'tree-item-self is-clickable' });
@@ -18,19 +19,15 @@ export class TreeItemLeaf<TData> extends HTMLElement {
     this.inner = this.mainWrapper.createDiv({ cls: 'tree-item-inner tree-item-inner-extensions' });
     this.flairWrapper = this.mainWrapper.createDiv({ cls: 'tree-item-flair-outer' });
 
-    this.data = data;
-    this.inner.setText(textGetter(data));
-
     this.suffix = this.inner.createEl('span', { cls: 'tree-item-inner-suffix' });
     this.flair = this.flairWrapper.createEl('span', { cls: 'tree-item-flair' });
-
   }
 
-  public static register = () => customElements.define("tree-item-leaf", TreeItemLeaf);
+  public abstract sortChildren(): void;
 
-  public attach = (parent: HTMLElement) => {
-    parent.appendChild(this);
-  }
+  public abstract get hash(): string;
+
+  public abstract get text(): string;
 
   public setDisable = () => {
     this.mainWrapper.style.textDecoration = 'line-through';
@@ -51,6 +48,7 @@ export class TreeItemLeaf<TData> extends HTMLElement {
 
   public addButton = (label: string, iconName: string, onclick: (this: HTMLDivElement, ev: MouseEvent) => any) => {
     const button = new ButtonComponent(this.mainWrapper);
+
     button.setTooltip(label);
     button.setIcon(iconName);
     button.setClass('tree-item-button');
@@ -58,14 +56,19 @@ export class TreeItemLeaf<TData> extends HTMLElement {
 
     this.buttons.push(button);
   }
+
+  public attach = (parent: HTMLElement, insertBeforeIndex?: number) => {   
+    this.inner.setText(this.text);
+    insertBeforeIndex === undefined ? parent.appendChild(this) : parent.insertBefore(this, parent.children[insertBeforeIndex]);
+  }
 }
 
-export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemLeaf<TData> {
-  protected readonly childrenWrapper: HTMLDivElement;
-  private readonly iconWrapper: HTMLDivElement;
+export abstract class TreeItem<TData> extends TreeItemBase<TData> {
+  protected childrenWrapper: HTMLDivElement;
+  private iconWrapper: HTMLDivElement;
 
-  public constructor(data: TData, textGetter: (data: TData) => string) {
-    super(data, textGetter);
+  public constructor(value: TData) {
+    super(value);
 
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
@@ -83,11 +86,9 @@ export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemL
     this.mainWrapper.addEventListener('click', () => this.isCollapsed() ? this.expand() : this.collapse());
   }
 
-  public static register = () => customElements.define("tree-item", TreeItem);
+  public abstract getChildren() : TreeItemBase<any>[];
 
-  public getChildren = () => Array.from(this.childrenWrapper.children) as TChild[];
-
-  public addChild = (child: TreeItemLeaf<any>) => this.childrenWrapper.appendChild(child);
+  public abstract addChildren(children: TreeItemBase<any>[]): void;
 
   public isCollapsed = () => this.hasClass("is-collapsed");
 
@@ -104,14 +105,6 @@ export class TreeItem<TData, TChild extends TreeItemLeaf<any>> extends TreeItemL
   public setDisable = () => {
     super.setDisable();
     this.mainWrapper.style.textDecoration = 'line-through';
-    Array.from(this.childrenWrapper.children).forEach(child => (child as TreeItem<any, any>).setDisable());
-  }
-
-  public delete = () => {
-    this.remove();
-  }
-
-  public deleteChildren = () => {
-    this.childrenWrapper.replaceChildren();
+    Array.from(this.childrenWrapper.children).forEach(child => (child as TreeItemBase<any>).setDisable());
   }
 }

@@ -1,8 +1,9 @@
-import { CrossbowView } from './view/view';
-import { registerCrossbowIcons } from './icons';
+import { CrossbowView } from './src/view/view';
+import { registerCrossbowIcons } from './src/icons';
 import { CacheItem, Editor, MarkdownView, Plugin, TFile, EditorPosition, CachedMetadata } from 'obsidian';
-import { CrossbowSettingTab } from './settings';
-import './editorExtension';
+import { CrossbowSettingTab } from './src/settings';
+import './src/editorExtension';
+import { Match, Occurrence, Suggestion } from './src/suggestion';
 
 export interface CrossbowPluginSettings {
   ignoredWords: string[];
@@ -21,20 +22,16 @@ const DEFAULT_SETTINGS: CrossbowPluginSettings = {
   useLogging: false,
 }
 
-export interface CrossbowCacheEntity {
+type CustomCache = { [key: string]: CacheEntry }
+
+export interface CacheEntry {
   file: TFile;
   item?: CacheItem;
   text: string;
 }
 
-export type CrossbowCache = { [key: string]: CrossbowCacheEntity }
-
-export type CrossbowCacheMatch = CrossbowCacheEntity & { rank: '🏆' | '🥇' | '🥈' | '🥉' }
-
-export class CrossbowSuggestion {
-  public word: string;
-  public occurrences: EditorPosition[];
-  public matches: CrossbowCacheMatch[];
+export interface CacheMatch extends CacheEntry {
+  rank: '🏆' | '🥇' | '🥈' | '🥉';
 }
 
 export default class CrossbowPlugin extends Plugin {
@@ -46,7 +43,7 @@ export default class CrossbowPlugin extends Plugin {
 
   private updateTimeout: ReturnType<typeof setTimeout>;
 
-  private readonly crossbowCache: CrossbowCache = {}
+  private readonly crossbowCache: CustomCache = {}
 
   public runWithCacheUpdate = (fileHasChanged: boolean) => {
     const files = this.app.vault.getFiles();
@@ -64,6 +61,9 @@ export default class CrossbowPlugin extends Plugin {
 
     // Register view elements
     registerCrossbowIcons()
+    Suggestion.register();
+    Occurrence.register();
+    Match.register();
     this.registerView(CrossbowView.viewType, leaf => new CrossbowView(leaf, this));
 
     // Ribbon icon to access the crossbow pane
@@ -141,15 +141,15 @@ export default class CrossbowPlugin extends Plugin {
 
   private getCrossbowView = (): CrossbowView => app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
 
-  private addOrUpdateCacheEntity = (entity: CrossbowCacheEntity) => this.crossbowCache[entity.text] = entity;
+  private addOrUpdateCacheEntity = (entity: CacheEntry) => this.crossbowCache[entity.text] = entity;
 
-  private getCrossbowSuggestionsInCurrentEditor = (): CrossbowSuggestion[] => {
-    const result: CrossbowSuggestion[] = [];
+  private getCrossbowSuggestionsInCurrentEditor = (): Suggestion[] => {
+    const result: Suggestion[] = [];
     const wordLookup = this.currentEditor.getWordLookup();
 
     Object.entries(wordLookup).forEach(entry => {
-      const [word, occurrences] = entry;
-      const matchSet: Set<CrossbowCacheMatch> = new Set();
+      const [word, editorPositions] = entry;
+      const matchSet: Set<CacheMatch> = new Set();
 
       // Find matches 
       Object.keys(this.crossbowCache).forEach(crossbowCacheKey => {
@@ -195,10 +195,8 @@ export default class CrossbowPlugin extends Plugin {
         matchSet.add({ ...this.crossbowCache[crossbowCacheKey], rank: '🥈' });
       })
 
-      const matches = Array.from(matchSet);
-
-      if (matches.length > 0) {
-        result.push({ word, occurrences, matches });
+      if (matchSet.size > 0) {
+        result.push(new Suggestion(word, editorPositions, Array.from(matchSet)));
       }
     })
 

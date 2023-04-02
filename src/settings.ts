@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import CrossbowPlugin, { CrossbowPluginSettings } from './main';
+import CrossbowPlugin, { CrossbowPluginSettings } from '../main';
 
 export class CrossbowSettingTab extends PluginSettingTab {
   plugin: CrossbowPlugin;
