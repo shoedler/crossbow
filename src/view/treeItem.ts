@@ -1,3 +1,15 @@
+// Copyright (C) 2023 - shoedler - github.com/shoedler
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
 import { ButtonComponent, getIcon } from 'obsidian';
 
 export abstract class TreeItemBase<TData> extends HTMLElement {
@@ -37,15 +49,17 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
   }
 
   public connectedCallback() {
+    console.log(this.text, this.parentElement, this.parentNode);
+
     this.inner.setText(this.text);
   }
 
   public abstract sortChildren(): void;
 
-  public setDisable = () => {
+  public setDisable() {
     this.mainWrapper.style.textDecoration = 'line-through';
     this.buttons.forEach((button) => button.setDisabled(true));
-  };
+  }
 
   public addOnClick = (
     listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any
@@ -87,10 +101,10 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
 
-    this.childrenWrapper = createEl('div', { cls: 'tree-item-children' });
+    this.childrenWrapper = this.createDiv({ cls: 'tree-item-children' });
     this.childrenWrapper.style.display = 'none';
 
-    this.iconWrapper = createEl('div', {
+    this.iconWrapper = this.createDiv({
       cls: ['tree-item-icon', 'collapse-icon'],
     });
     this.iconWrapper.appendChild(getIcon('right-triangle')!);
@@ -106,31 +120,29 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
 
   public abstract getChildren(): TreeItemBase<any>[];
 
-  public isCollapsed = () => this.hasClass('is-collapsed');
+  public isCollapsed() {
+    return this.hasClass('is-collapsed');
+  }
 
-  public expand = () => {
+  public expand() {
     this.removeClass('is-collapsed');
     this.childrenWrapper.style.display = 'block';
-  };
+  }
 
-  public collapse = () => {
+  public collapse() {
     this.addClass('is-collapsed');
     this.childrenWrapper.style.display = 'none';
-  };
+  }
 
-  public setDisable = () => {
+  public setDisable() {
     super.setDisable();
     this.mainWrapper.style.textDecoration = 'line-through';
     Array.from(this.childrenWrapper.children).forEach((child) =>
       (child as TreeItemBase<any>).setDisable()
     );
-  };
+  }
 
-  public addChildren = (children: TreeItemBase<any>[]) => {
-    console.log('addChildren', this.childrenWrapper, children);
-
-    children.forEach((child) => {
-      this.childrenWrapper.appendChild(child);
-    });
-  };
+  public addChildren(children: TreeItemBase<any>[]) {
+    this.childrenWrapper.replaceChildren(...children);
+  }
 }

@@ -23,7 +23,6 @@ which will insert the following link:
 
 ![image](https://user-images.githubusercontent.com/38029550/229280048-fe7a8e31-8cbf-4090-a7f0-4bf0b83814d7.png)
 
-
 ## How to install manually
 
 1. Clone this repo.
