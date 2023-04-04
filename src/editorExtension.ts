@@ -54,10 +54,7 @@ Editor.prototype.getWordLookup = function (): {
 
     // Remove obsidian links which are longer than one word
     if (filteredWords[i].word.startsWith('[[')) {
-      while (
-        !filteredWords[++i].word.endsWith(']]') ||
-        i >= filteredWords.length
-      ) {
+      while (!filteredWords[++i].word.endsWith(']]') || i >= filteredWords.length) {
         /* nothing */
       }
     }

@@ -31,23 +31,13 @@ export interface StripMarkdownOptions {
 export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
   options = options || {};
 
-  options.listUnicodeChar = options.hasOwnProperty('listUnicodeChar')
-    ? options.listUnicodeChar
-    : undefined;
-  options.stripListLeaders = options.hasOwnProperty('stripListLeaders')
-    ? options.stripListLeaders
-    : true;
+  options.listUnicodeChar = options.hasOwnProperty('listUnicodeChar') ? options.listUnicodeChar : undefined;
+  options.stripListLeaders = options.hasOwnProperty('stripListLeaders') ? options.stripListLeaders : true;
   options.gfm = options.hasOwnProperty('gfm') ? options.gfm : true;
-  options.useImgAltText = options.hasOwnProperty('useImgAltText')
-    ? options.useImgAltText
-    : true;
+  options.useImgAltText = options.hasOwnProperty('useImgAltText') ? options.useImgAltText : true;
   options.abbr = options.hasOwnProperty('abbr') ? options.abbr : undefined;
-  options.replaceLinksWithUrl = options.hasOwnProperty('replaceLinksWithURL')
-    ? options.replaceLinksWithUrl
-    : true;
-  options.htmlTagsToSkip = options.hasOwnProperty('htmlTagsToSkip')
-    ? options.htmlTagsToSkip
-    : [];
+  options.replaceLinksWithUrl = options.hasOwnProperty('replaceLinksWithURL') ? options.replaceLinksWithUrl : true;
+  options.htmlTagsToSkip = options.hasOwnProperty('htmlTagsToSkip') ? options.htmlTagsToSkip : [];
 
   var output = md || '';
 
@@ -57,10 +47,7 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
   try {
     if (options.stripListLeaders) {
       if (options.listUnicodeChar)
-        output = output.replace(
-          /^([\s\t]*)([\*\-\+]|\d+\.)\s+/gm,
-          options.listUnicodeChar + ' $1'
-        );
+        output = output.replace(/^([\s\t]*)([\*\-\+]|\d+\.)\s+/gm, options.listUnicodeChar + ' $1');
       else output = output.replace(/^([\s\t]*)([\*\-\+]|\d+\.)\s+/gm, '$1');
     }
     if (options.gfm) {
@@ -85,14 +72,10 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
     var htmlReplaceRegex = new RegExp('<[^>]*>', 'g');
     if (options.htmlTagsToSkip!.length > 0) {
       // Using negative lookahead. Eg. (?!sup|sub) will not match 'sup' and 'sub' tags.
-      var joinedHtmlTagsToSkip =
-        '(?!' + options.htmlTagsToSkip!.join('|') + ')';
+      var joinedHtmlTagsToSkip = '(?!' + options.htmlTagsToSkip!.join('|') + ')';
 
       // Adding the lookahead literal with the default regex for html. Eg./<(?!sup|sub)[^>]*>/ig
-      htmlReplaceRegex = new RegExp(
-        '<' + joinedHtmlTagsToSkip + '[^>]*>',
-        'ig'
-      );
+      htmlReplaceRegex = new RegExp('<' + joinedHtmlTagsToSkip + '[^>]*>', 'ig');
     }
 
     output = output
@@ -106,20 +89,14 @@ export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
       // Remove images
       .replace(/\!\[(.*?)\][\[\(].*?[\]\)]/g, options.useImgAltText ? '$1' : '')
       // Remove inline links
-      .replace(
-        /\[([^\]]*?)\][\[\(].*?[\]\)]/g,
-        options.replaceLinksWithUrl ? '$2' : '$1'
-      )
+      .replace(/\[([^\]]*?)\][\[\(].*?[\]\)]/g, options.replaceLinksWithUrl ? '$2' : '$1')
       // Remove blockquotes
       .replace(/^\s{0,3}>\s?/gm, '')
       // .replace(/(^|\n)\s{0,3}>\s?/g, '\n\n')
       // Remove reference-style links?
       .replace(/^\s{1,2}\[(.*?)\]: (\S+)( ".*?")?\s*$/g, '')
       // Remove atx-style headers
-      .replace(
-        /^(\n)?\s{0,}#{1,6}\s+| {0,}(\n)?\s{0,}#{0,} #{0,}(\n)?\s{0,}$/gm,
-        '$1$2$3'
-      )
+      .replace(/^(\n)?\s{0,}#{1,6}\s+| {0,}(\n)?\s{0,}#{0,} #{0,}(\n)?\s{0,}$/gm, '$1$2$3')
       // Remove * emphasis
       .replace(/([\*]+)(\S)(.*?\S)??\1/g, '$2$3')
       // Remove _ emphasis. Unlike *, _ emphasis gets rendered only if

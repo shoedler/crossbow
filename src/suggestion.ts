@@ -66,9 +66,7 @@ export class Occurrence extends TreeItem<EditorPosition> {
 
   public sortChildren(): void {
     this.getChildren()
-      .sort(
-        (a, b) => a.value.rank.codePointAt(0)! - b.value.rank.codePointAt(0)!
-      )
+      .sort((a, b) => a.value.rank.codePointAt(0)! - b.value.rank.codePointAt(0)!)
       .forEach((child) => {
         this.childrenWrapper.appendChild(child);
       });
