@@ -41,17 +41,20 @@ export class CrossbowView extends ItemView {
     this.navigation = false;
   }
 
-  public clear = (): void => this.contentEl.empty();
+  public clear(): void {
+    this.contentEl.empty();
+  }
 
-  private getCurrentSuggestions = (): Suggestion[] =>
-    this.contentEl.children.length > 0
+  private getCurrentSuggestions(): Suggestion[] {
+    return this.contentEl.children.length > 0
       ? (Array.from(this.contentEl.children) as Suggestion[])
       : [];
+  }
 
-  public updateSuggestions = (
+  public updateSuggestions(
     suggestions: Suggestion[],
     fileHasChanged: boolean
-  ) => {
+  ): void {
     this.crossbow.debugLog(
       `${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`
     );
@@ -92,10 +95,13 @@ export class CrossbowView extends ItemView {
       });
 
       // Insert / append the new suggestion, depending on whether it already existed
-      existingSuggestion
-        ? this.contentEl.replaceChild(suggestion, existingSuggestion)
-        : this.contentEl.appendChild(suggestion);
-      existingSuggestion?.remove();
+      if (existingSuggestion) {
+        this.contentEl.replaceChild(suggestion, existingSuggestion);
+        existingSuggestion.isCollapsed() ? null : suggestion.expand();
+        existingSuggestion?.remove();
+      } else {
+        this.contentEl.appendChild(suggestion);
+      }
 
       // Add flair
       const ranks = new Set<CacheMatch['rank']>();
@@ -111,19 +117,19 @@ export class CrossbowView extends ItemView {
 
     // Now, we're left with the items that we need to remove
     currentSuggestions.forEach((item) => item.remove());
-  };
+  }
 
-  public createSuggestion = (
+  public createSuggestion(
     word: string,
     editorPositions: EditorPosition[],
     cacheMatches: CacheMatch[]
-  ): Suggestion => {
+  ): Suggestion {
     const suggestion = new Suggestion(word, cacheMatches);
     const occurrences = editorPositions.map((p) => new Occurrence(p));
 
     occurrences.forEach((occurrence) => {
       const matches = suggestion.cacheMatches.map((m) => new Match(m));
-      occurrence.addChildren(matches);
+      occurrence.addTreeItems(matches);
 
       // Scroll into view action
       const scrollIntoView = () => {
@@ -195,12 +201,12 @@ export class CrossbowView extends ItemView {
       });
     });
 
-    suggestion.addChildren(occurrences);
+    suggestion.addTreeItems(occurrences);
 
     const w = window as any;
     w.suggestions = w.suggestions || [];
     w.suggestions.push({ suggestion, occurrences });
 
     return suggestion;
-  };
+  }
 }

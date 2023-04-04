@@ -68,18 +68,18 @@ export default class CrossbowPlugin extends Plugin {
 
   private readonly crossbowCache: CustomCache = {};
 
-  public runWithCacheUpdate = (fileHasChanged: boolean) => {
+  public runWithCacheUpdate(fileHasChanged: boolean): void {
     const files = this.app.vault.getFiles();
     files.forEach((file) => this.updateCrossbowCacheEntitiesOfFile(file));
     this.runWithoutCacheUpdate(fileHasChanged);
-  };
+  }
 
-  public runWithoutCacheUpdate = (fileHasChanged: boolean) => {
+  public runWithoutCacheUpdate(fileHasChanged: boolean): void {
     const data = this.getCrossbowSuggestionsInCurrentEditor();
     this.getCrossbowView()?.updateSuggestions(data, fileHasChanged);
-  };
+  }
 
-  public onload = async () => {
+  public async onload(): Promise<void> {
     await this.loadSettings();
 
     // Register view elements
@@ -123,34 +123,32 @@ export default class CrossbowPlugin extends Plugin {
     );
 
     this.debugLog('Crossbow is ready.');
-  };
+  }
 
-  public onunload = () => {
+  public onunload(): void {
     Object.assign(this.crossbowCache, {});
 
     this.getCrossbowView().unload();
     this.debugLog('Unloaded Crossbow.');
-  };
+  }
 
-  public loadSettings = async () =>
-    (this.settings = Object.assign(
-      {},
-      DEFAULT_SETTINGS,
-      await this.loadData()
-    ));
+  public async loadSettings(): Promise<void> {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
 
-  public loadDefaultSettings = async () => (this.settings = DEFAULT_SETTINGS);
+  public async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
 
-  public saveSettings = async () => await this.saveData(this.settings);
-
-  public debugLog = (message: string) =>
+  public debugLog(message: string): void {
     this.settings.useLogging && console.log(`🏹: ${message}`);
+  }
 
   private onMetadataChange = (
     file: TFile,
     data: string,
     cache: CachedMetadata
-  ) => {
+  ): void => {
     this.updateCrossbowCacheEntitiesOfFile(file, cache);
     this.debugLog(`Metadata cache updated for ${file.basename}.`);
 
@@ -161,7 +159,7 @@ export default class CrossbowPlugin extends Plugin {
     }, 700);
   };
 
-  private onFileOpen = () => {
+  private onFileOpen = (): void => {
     const prevCurrentFile = this._currentFile;
 
     this.setActiveEditorAndFile();
@@ -176,14 +174,16 @@ export default class CrossbowPlugin extends Plugin {
     }, 200);
   };
 
-  private getCrossbowView = (): CrossbowView =>
-    app.workspace.getLeavesOfType(CrossbowView.viewType)[0]
+  private getCrossbowView(): CrossbowView {
+    return app.workspace.getLeavesOfType(CrossbowView.viewType)[0]
       ?.view as CrossbowView;
+  }
 
-  private addOrUpdateCacheEntity = (entity: CacheEntry) =>
-    (this.crossbowCache[entity.text] = entity);
+  private addOrUpdateCacheEntity(entity: CacheEntry): void {
+    this.crossbowCache[entity.text] = entity;
+  }
 
-  private getCrossbowSuggestionsInCurrentEditor = (): Suggestion[] => {
+  private getCrossbowSuggestionsInCurrentEditor(): Suggestion[] {
     const result: Suggestion[] = [];
     const wordLookup = this.currentEditor.getWordLookup();
 
@@ -270,14 +270,14 @@ export default class CrossbowPlugin extends Plugin {
     });
 
     return result;
-  };
+  }
 
   // 'cache' can be passed in, if this is called from an event handler which already has the cache
   // This will prevent the cache from being retrieved twice
-  private updateCrossbowCacheEntitiesOfFile = (
+  private updateCrossbowCacheEntitiesOfFile(
     file: TFile,
     cache?: CachedMetadata
-  ) => {
+  ): void {
     if (file.extension !== 'md') return;
 
     const metadata = cache ? cache : app.metadataCache.getFileCache(file);
@@ -305,13 +305,13 @@ export default class CrossbowPlugin extends Plugin {
           })
         );
     }
-  };
+  }
 
-  private setActiveEditorAndFile = (): void => {
+  private setActiveEditorAndFile(): void {
     const leaf = this.app.workspace.getMostRecentLeaf();
     if (leaf?.view instanceof MarkdownView) {
       this._currentEditor = leaf.view.editor;
       this._currentFile = leaf.view.file;
     } else console.warn('🏹: Unable to determine current editor.');
-  };
+  }
 }

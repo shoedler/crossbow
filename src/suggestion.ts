@@ -19,8 +19,9 @@ export class Suggestion extends TreeItem<string> {
     super(word);
   }
 
-  public static register = (): void =>
+  public static register(): void {
     customElements.define('crossbow-suggestion', Suggestion);
+  }
 
   public get hash(): string {
     return this.value;
@@ -48,8 +49,9 @@ export class Occurrence extends TreeItem<EditorPosition> {
     super(value);
   }
 
-  public static register = (): void =>
+  public static register(): void {
     customElements.define('crossbow-occurrence', Occurrence);
+  }
 
   public get hash(): string {
     return `${this.value.line}:${this.value.ch}`;
@@ -74,8 +76,9 @@ export class Match extends TreeItemBase<CacheMatch> {
     super(value);
   }
 
-  public static register = (): void =>
+  public static register(): void {
     customElements.define('crossbow-match', Match);
+  }
 
   public get hash(): string {
     return `${this.value.text}|${this.value.file.path}`;

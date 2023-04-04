@@ -10,8 +10,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-// Credit: https://github.com/stiang/remove-markdown
-
 export interface StripMarkdownOptions {
   // char to insert instead of stripped list leaders (default: '')
   listUnicodeChar?: string;
@@ -29,6 +27,7 @@ export interface StripMarkdownOptions {
   htmlTagsToSkip?: string[];
 }
 
+// Credit: https://github.com/stiang/remove-markdown
 export function stripMarkdown(md: string, options?: StripMarkdownOptions) {
   options = options || {};
 

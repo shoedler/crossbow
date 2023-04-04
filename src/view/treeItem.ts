@@ -49,8 +49,6 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
   }
 
   public connectedCallback() {
-    console.log(this.text, this.parentElement, this.parentNode);
-
     this.inner.setText(this.text);
   }
 
@@ -61,25 +59,25 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
     this.buttons.forEach((button) => button.setDisabled(true));
   }
 
-  public addOnClick = (
+  public addOnClick(
     listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any
-  ) => {
+  ): void {
     this.mainWrapper.addEventListener('click', listener);
-  };
+  }
 
-  public addFlair = (text: string) => {
+  public addFlair(text: string): void {
     this.flair.innerText = text;
-  };
+  }
 
-  public addTextSuffix = (text: string) => {
+  public addTextSuffix(text: string): void {
     this.suffix.innerText = text;
-  };
+  }
 
-  public addButton = (
+  public addButton(
     label: string,
     iconName: string,
     onclick: (this: HTMLDivElement, ev: MouseEvent) => any
-  ) => {
+  ): void {
     const button = new ButtonComponent(this.mainWrapper);
 
     button.setTooltip(label);
@@ -88,7 +86,7 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
     button.onClick(onclick);
 
     this.buttons.push(button);
-  };
+  }
 }
 
 export abstract class TreeItem<TData> extends TreeItemBase<TData> {
@@ -142,7 +140,7 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
     );
   }
 
-  public addChildren(children: TreeItemBase<any>[]) {
+  public addTreeItems(children: TreeItemBase<any>[]) {
     this.childrenWrapper.replaceChildren(...children);
   }
 }
