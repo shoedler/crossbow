@@ -1,6 +1,6 @@
 {
   "name": "crossbow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Obsidian plugin to find possible backlinks in your notes (https://obsidian.md)",
   "main": "main.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "shoedler",
-  "license": "MIT",
+  "license": "gplv3",
   "devDependencies": {
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "5.29.0",

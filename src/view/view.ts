@@ -115,6 +115,7 @@ export class CrossbowView extends ItemView {
           ch: occurrence.value.ch + suggestion.hash.length,
           line: occurrence.value.line,
         } as EditorPosition;
+
         this.crossbow.currentEditor.setSelection(occurrence.value, occurrenceEnd);
         this.crossbow.currentEditor.scrollIntoView({ from: occurrence.value, to: occurrenceEnd }, true);
       };
