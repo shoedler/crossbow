@@ -35,6 +35,7 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
 
     this.inner = this.mainWrapper.createDiv({
       cls: 'tree-item-inner tree-item-inner-extensions',
+      text: this.getCaptionText(),
     });
     this.flairWrapper = this.mainWrapper.createDiv({
       cls: 'tree-item-flair-outer',
@@ -48,20 +49,18 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
     });
   }
 
-  public connectedCallback() {
-    this.inner.setText(this.text);
-  }
-
   public abstract sortChildren(): void;
+
+  public getCaptionText(): string {
+    return this.text;
+  }
 
   public setDisable() {
     this.mainWrapper.style.textDecoration = 'line-through';
     this.buttons.forEach((button) => button.setDisabled(true));
   }
 
-  public addOnClick(
-    listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any
-  ): void {
+  public addOnClick(listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any): void {
     this.mainWrapper.addEventListener('click', listener);
   }
 
@@ -73,11 +72,7 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
     this.suffix.innerText = text;
   }
 
-  public addButton(
-    label: string,
-    iconName: string,
-    onclick: (this: HTMLDivElement, ev: MouseEvent) => any
-  ): void {
+  public addButton(label: string, iconName: string, onclick: (this: HTMLDivElement, ev: MouseEvent) => any): void {
     const button = new ButtonComponent(this.mainWrapper);
 
     button.setTooltip(label);
@@ -111,9 +106,7 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
     this.mainWrapper.prepend(this.iconWrapper);
 
     // Collapse / Fold
-    this.mainWrapper.addEventListener('click', () =>
-      this.isCollapsed() ? this.expand() : this.collapse()
-    );
+    this.mainWrapper.addEventListener('click', () => (this.isCollapsed() ? this.expand() : this.collapse()));
   }
 
   public abstract getChildren(): TreeItemBase<any>[];
@@ -135,9 +128,7 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
   public setDisable() {
     super.setDisable();
     this.mainWrapper.style.textDecoration = 'line-through';
-    Array.from(this.childrenWrapper.children).forEach((child) =>
-      (child as TreeItemBase<any>).setDisable()
-    );
+    Array.from(this.childrenWrapper.children).forEach((child) => (child as TreeItemBase<any>).setDisable());
   }
 
   public addTreeItems(children: TreeItemBase<any>[]) {

@@ -46,18 +46,11 @@ export class CrossbowView extends ItemView {
   }
 
   private getCurrentSuggestions(): Suggestion[] {
-    return this.contentEl.children.length > 0
-      ? (Array.from(this.contentEl.children) as Suggestion[])
-      : [];
+    return this.contentEl.children.length > 0 ? (Array.from(this.contentEl.children) as Suggestion[]) : [];
   }
 
-  public updateSuggestions(
-    suggestions: Suggestion[],
-    fileHasChanged: boolean
-  ): void {
-    this.crossbow.debugLog(
-      `${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`
-    );
+  public updateSuggestions(suggestions: Suggestion[], fileHasChanged: boolean): void {
+    this.crossbow.debugLog(`${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`);
 
     const currentSuggestions = this.getCurrentSuggestions();
 
@@ -69,15 +62,10 @@ export class CrossbowView extends ItemView {
     suggestions.sort((a, b) => a.hash.localeCompare(b.hash));
     suggestions.forEach((suggestion) => suggestion.sortChildren());
 
-    suggestions.forEach((suggestion, index) => {
+    suggestions.forEach((suggestion) => {
       // Find if this Suggestion already exists
-      const existingSuggestionIndex = currentSuggestions.findIndex(
-        (item) => item.hash === suggestion.hash
-      );
-      const existingSuggestion =
-        existingSuggestionIndex !== -1
-          ? currentSuggestions.splice(existingSuggestionIndex, 1)[0]
-          : undefined;
+      const index = currentSuggestions.findIndex((item) => item.hash === suggestion.hash);
+      const existingSuggestion = index !== -1 ? currentSuggestions.splice(index, 1)[0] : undefined;
 
       const expandedOccurrencesHashes = existingSuggestion
         ? existingSuggestion
@@ -86,7 +74,6 @@ export class CrossbowView extends ItemView {
             .map((item) => item.hash)
         : [];
 
-      // Configure Occurrences
       suggestion.getChildren().forEach((occurrence) => {
         // Toggle expanded state, if it was expanded before
         if (expandedOccurrencesHashes.includes(occurrence.hash)) {
@@ -97,77 +84,61 @@ export class CrossbowView extends ItemView {
       // Insert / append the new suggestion, depending on whether it already existed
       if (existingSuggestion) {
         existingSuggestion.replaceWith(suggestion);
-        existingSuggestion.isCollapsed()
-          ? suggestion.collapse()
-          : suggestion.expand();
+        existingSuggestion.isCollapsed() ? suggestion.collapse() : suggestion.expand();
         existingSuggestion?.remove();
       } else {
         this.contentEl.appendChild(suggestion);
       }
-
-      // Add flair
-      const ranks = new Set<CacheMatch['rank']>();
-      suggestion.cacheMatches.forEach((match) => ranks.add(match.rank));
-
-      const availableMatchRanks = Array.from(ranks)
-        .sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!)
-        .join('');
-
-      suggestion.addFlair(availableMatchRanks);
-      suggestion.addTextSuffix(`(${suggestion.children.length.toString()})`);
     });
 
-    // Now, we're left with the items that we need to remove
+    // Now, we're left with the existing suggestions that we need to remove
     currentSuggestions.forEach((item) => item.remove());
   }
 
-  public createSuggestion(
-    word: string,
-    editorPositions: EditorPosition[],
-    cacheMatches: CacheMatch[]
-  ): Suggestion {
+  public createSuggestion(word: string, editorPositions: EditorPosition[], cacheMatches: CacheMatch[]): Suggestion {
     const suggestion = new Suggestion(word, cacheMatches);
     const occurrences = editorPositions.map((p) => new Occurrence(p));
 
+    // Configure Occurrences
     occurrences.forEach((occurrence) => {
+      // Create and add matches to occurrence, always using the **same** cacheMatches array
       const matches = suggestion.cacheMatches.map((m) => new Match(m));
       occurrence.addTreeItems(matches);
 
-      // Scroll into view action
+      // Scroll into view action...
       const scrollIntoView = () => {
         const occurrenceEnd = {
           ch: occurrence.value.ch + suggestion.hash.length,
           line: occurrence.value.line,
         } as EditorPosition;
-        this.crossbow.currentEditor.setSelection(
-          occurrence.value,
-          occurrenceEnd
-        );
-        this.crossbow.currentEditor.scrollIntoView(
-          { from: occurrence.value, to: occurrenceEnd },
-          true
-        );
+        this.crossbow.currentEditor.setSelection(occurrence.value, occurrenceEnd);
+        this.crossbow.currentEditor.scrollIntoView({ from: occurrence.value, to: occurrenceEnd }, true);
       };
 
-      // Can be invoked via flair button...
-      occurrence.addButton(
-        'Scroll into View',
-        'lucide-scroll',
-        (ev: MouseEvent) => {
-          scrollIntoView();
-          ev.preventDefault();
-          ev.stopPropagation();
-        }
-      );
+      // ...Can be invoked via flair button...
+      occurrence.addButton('Scroll into View', 'lucide-scroll', (ev: MouseEvent) => {
+        scrollIntoView();
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
 
-      // As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
+      // ...As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
       occurrence.addOnClick(() => {
         if (!occurrence.isCollapsed()) scrollIntoView();
       });
 
       // Configure Matches
       occurrence.getChildren().forEach((match) => {
-        // Add backlink & remove action
+        const link = match.value.item
+          ? this.app.fileManager.generateMarkdownLink(
+              match.value.file,
+              match.value.text,
+              '#' + match.value.text,
+              suggestion.hash
+            )
+          : this.app.fileManager.generateMarkdownLink(match.value.file, match.value.text, undefined, suggestion.hash);
+
+        // 'Use' button inserts backlink & disables the occurrence
         match.addButton('Use', 'lucide-inspect', () => {
           occurrence.getChildren().forEach((o) => o.setDisable());
 
@@ -176,25 +147,7 @@ export class CrossbowView extends ItemView {
             line: occurrence.value.line,
           } as EditorPosition;
 
-          const link = match.value.item
-            ? this.app.fileManager.generateMarkdownLink(
-                match.value.file,
-                match.value.text,
-                '#' + match.value.text,
-                suggestion.hash
-              )
-            : this.app.fileManager.generateMarkdownLink(
-                match.value.file,
-                match.value.text,
-                undefined,
-                suggestion.hash
-              );
-
-          this.crossbow.currentEditor.replaceRange(
-            link,
-            occurrence.value,
-            occurrenceEnd
-          );
+          this.crossbow.currentEditor.replaceRange(link, occurrence.value, occurrenceEnd);
         });
 
         // Go to source action
@@ -205,6 +158,17 @@ export class CrossbowView extends ItemView {
     });
 
     suggestion.addTreeItems(occurrences);
+
+    // Add flair
+    const ranks = new Set<CacheMatch['rank']>();
+    suggestion.cacheMatches.forEach((match) => ranks.add(match.rank));
+
+    const availableMatchRanks = Array.from(ranks)
+      .sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!)
+      .join('');
+
+    suggestion.addFlair(availableMatchRanks);
+    suggestion.addTextSuffix(`(${occurrences.length.toString()})`);
 
     return suggestion;
   }
