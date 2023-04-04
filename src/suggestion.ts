@@ -38,7 +38,7 @@ export class Suggestion extends TreeItem<string> {
     this.getChildren()
       .sort((a, b) => a.value.line - b.value.line)
       .forEach((child) => {
-        this.appendChild(child);
+        this.childrenWrapper.appendChild(child);
         child.sortChildren();
       });
   }
@@ -65,9 +65,13 @@ export class Occurrence extends TreeItem<EditorPosition> {
   }
 
   public sortChildren(): void {
-    this.getChildren().sort(
-      (a, b) => a.value.rank.codePointAt(0)! - b.value.rank.codePointAt(0)!
-    );
+    this.getChildren()
+      .sort(
+        (a, b) => a.value.rank.codePointAt(0)! - b.value.rank.codePointAt(0)!
+      )
+      .forEach((child) => {
+        this.childrenWrapper.appendChild(child);
+      });
   }
 }
 
