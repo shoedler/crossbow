@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { EditorPosition, ItemView, WorkspaceLeaf } from 'obsidian';
+import { Editor, EditorPosition, ItemView, WorkspaceLeaf } from 'obsidian';
 import { Match, Occurrence, Suggestion } from 'src/suggestion';
 import CrossbowPlugin, { CacheMatch } from 'src/main';
 
@@ -99,7 +99,12 @@ export class CrossbowView extends ItemView {
       });
   }
 
-  public createSuggestion(word: string, editorPositions: EditorPosition[], cacheMatches: CacheMatch[]): Suggestion {
+  public createSuggestion(
+    word: string,
+    editorPositions: EditorPosition[],
+    cacheMatches: CacheMatch[],
+    targetEditor: Editor
+  ): Suggestion {
     const suggestion = new Suggestion(word, cacheMatches);
     const occurrences = editorPositions.map((p) => new Occurrence(p));
 
@@ -116,8 +121,8 @@ export class CrossbowView extends ItemView {
           line: occurrence.value.line,
         } as EditorPosition;
 
-        this.crossbow.currentEditor.setSelection(occurrence.value, occurrenceEnd);
-        this.crossbow.currentEditor.scrollIntoView({ from: occurrence.value, to: occurrenceEnd }, true);
+        targetEditor.setSelection(occurrence.value, occurrenceEnd);
+        targetEditor.scrollIntoView({ from: occurrence.value, to: occurrenceEnd }, true);
       };
 
       // ...Can be invoked via flair button...
@@ -152,7 +157,7 @@ export class CrossbowView extends ItemView {
             line: occurrence.value.line,
           } as EditorPosition;
 
-          this.crossbow.currentEditor.replaceRange(link, occurrence.value, occurrenceEnd);
+          targetEditor.replaceRange(link, occurrence.value, occurrenceEnd);
         });
 
         // Go to source action

@@ -49,10 +49,7 @@ export interface CacheMatch extends CacheEntry {
 
 export default class CrossbowPlugin extends Plugin {
   public settings: CrossbowPluginSettings;
-  private _currentEditor: Editor;
-  public get currentEditor(): Editor {
-    return this._currentEditor;
-  }
+
   private _currentFile: TFile;
   public get currentFile(): TFile {
     return this._currentFile;
@@ -164,7 +161,13 @@ export default class CrossbowPlugin extends Plugin {
 
   private getCrossbowSuggestionsInCurrentEditor(): Suggestion[] {
     const result: Suggestion[] = [];
-    const wordLookup = this.currentEditor.getWordLookup();
+    const targetEditor = this.app.workspace.activeEditor?.editor;
+
+    if (!targetEditor) return result;
+
+    const wordLookup = targetEditor.getWordLookup();
+
+    if (!wordLookup) return result;
 
     Object.entries(wordLookup).forEach((entry) => {
       const [word, editorPositions] = entry;
@@ -220,7 +223,7 @@ export default class CrossbowPlugin extends Plugin {
       });
 
       if (matchSet.size > 0) {
-        result.push(this.getCrossbowView().createSuggestion(word, editorPositions, Array.from(matchSet)));
+        result.push(this.getCrossbowView().createSuggestion(word, editorPositions, Array.from(matchSet), targetEditor));
       }
     });
 
@@ -262,7 +265,6 @@ export default class CrossbowPlugin extends Plugin {
   private setActiveEditorAndFile(): void {
     const leaf = this.app.workspace.getMostRecentLeaf();
     if (leaf?.view instanceof MarkdownView) {
-      this._currentEditor = leaf.view.editor;
       this._currentFile = leaf.view.file;
     } else console.warn('🏹: Unable to determine current editor.');
   }

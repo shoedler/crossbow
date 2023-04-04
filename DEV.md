@@ -1,17 +1,15 @@
-
 # Dev Notes
 
 ## Roadmap
 
-* [x] General UX Improvement
-* [ ] Add "Goto Source" action on suggestions
-* [ ] Fix occurrences hint not being updated when new occurrences are found
+- [x] General UX Improvement
+- [ ] Add "Goto Source" action on suggestions
+- [x] Fix occurrences hint not being updated when new occurrences are found
 
 ## Refactors
 
-* [ ] Refactor handling / updating of `TreeItem`s. Use a reactive approach instead of manually updating the tree.
-* [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax operators)
-* [ ] Move `register()` to the `TreeItemLeaf` base class and require derivatives to implement it.
+- [x] Refactor handling / updating of `TreeItem`s. Use a reactive approach instead of manually updating the tree.
+- [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax operators)
 
 ## Releasing new releases
 
