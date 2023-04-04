@@ -58,10 +58,6 @@ export class CrossbowView extends ItemView {
       this.clear();
     }
 
-    // Sort
-    suggestions.sort((a, b) => a.hash.localeCompare(b.hash));
-    suggestions.forEach((suggestion) => suggestion.sortChildren());
-
     suggestions.forEach((suggestion) => {
       // Find if this Suggestion already exists
       const index = currentSuggestions.findIndex((item) => item.hash === suggestion.hash);
@@ -93,6 +89,14 @@ export class CrossbowView extends ItemView {
 
     // Now, we're left with the existing suggestions that we need to remove
     currentSuggestions.forEach((item) => item.remove());
+
+    // Sort
+    (Array.from(this.contentEl.children) as Suggestion[])
+      .sort((a, b) => a.hash.localeCompare(b.hash))
+      .forEach((child) => {
+        this.contentEl.appendChild(child);
+        child.sortChildren();
+      });
   }
 
   public createSuggestion(word: string, editorPositions: EditorPosition[], cacheMatches: CacheMatch[]): Suggestion {
@@ -154,6 +158,8 @@ export class CrossbowView extends ItemView {
         match.addButton('Go To Source', 'lucide-search', () => {
           console.warn("🏹: 'Go To Source' is not yet implemented");
         });
+
+        match.addTextSuffix(match.value.type);
       });
     });
 

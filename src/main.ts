@@ -40,6 +40,7 @@ export interface CacheEntry {
   file: TFile;
   item?: CacheItem;
   text: string;
+  type: 'Tag' | 'File' | 'Heading';
 }
 
 export interface CacheMatch extends CacheEntry {
@@ -234,7 +235,7 @@ export default class CrossbowPlugin extends Plugin {
     const metadata = cache ? cache : app.metadataCache.getFileCache(file);
 
     if (file.basename.length >= this.settings.suggestedReferencesMinimumWordLength)
-      this.addOrUpdateCacheEntity({ file, text: file.basename });
+      this.addOrUpdateCacheEntity({ file, text: file.basename, type: 'File' });
 
     if (metadata) {
       if (metadata.headings)
@@ -243,6 +244,7 @@ export default class CrossbowPlugin extends Plugin {
             item: headingCache,
             file,
             text: headingCache.heading,
+            type: 'Heading',
           })
         );
       if (metadata.tags)
@@ -251,6 +253,7 @@ export default class CrossbowPlugin extends Plugin {
             item: tagCache,
             file,
             text: tagCache.tag,
+            type: 'Tag',
           })
         );
     }
