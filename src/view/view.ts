@@ -96,8 +96,10 @@ export class CrossbowView extends ItemView {
 
       // Insert / append the new suggestion, depending on whether it already existed
       if (existingSuggestion) {
-        this.contentEl.replaceChild(suggestion, existingSuggestion);
-        existingSuggestion.isCollapsed() ? null : suggestion.expand();
+        existingSuggestion.replaceWith(suggestion);
+        existingSuggestion.isCollapsed()
+          ? suggestion.collapse()
+          : suggestion.expand();
         existingSuggestion?.remove();
       } else {
         this.contentEl.appendChild(suggestion);
@@ -173,6 +175,7 @@ export class CrossbowView extends ItemView {
             ch: occurrence.value.ch + suggestion.hash.length,
             line: occurrence.value.line,
           } as EditorPosition;
+
           const link = match.value.item
             ? this.app.fileManager.generateMarkdownLink(
                 match.value.file,
@@ -202,10 +205,6 @@ export class CrossbowView extends ItemView {
     });
 
     suggestion.addTreeItems(occurrences);
-
-    const w = window as any;
-    w.suggestions = w.suggestions || [];
-    w.suggestions.push({ suggestion, occurrences });
 
     return suggestion;
   }
