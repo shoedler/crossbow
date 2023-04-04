@@ -32,15 +32,17 @@ export class CrossbowSettingTab extends PluginSettingTab {
       .setDesc(
         'A case-sensitive, comma separated list of words to ignore when searching for linkables. (Whitepaces will be trimmed)'
       )
-      .addText((text) =>
-        text.setValue(this.plugin.settings.ignoredWords?.join(', ') ?? '').onChange(
+      .addTextArea((textArea) => {
+        textArea.setValue(this.plugin.settings.ignoredWords?.join(', ') ?? '').onChange(
           async (value) =>
             await this.updateSettingValue(
               'ignoredWords',
               value.split(',').map((word) => word.trim())
             )
-        )
-      );
+        );
+
+        textArea.inputEl.setAttr('style', 'height: 10vh; width: 25vw;');
+      });
 
     new Setting(containerEl)
       .setName('Ignore suggestions which start with a lowercase letter')
@@ -65,13 +67,13 @@ export class CrossbowSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Minimum word length of suggestions')
       .setDesc('Defines the min. length a cached word must have for it to be considered a suggestion')
-      .addText((text) =>
-        text.setValue(this.plugin.settings.suggestedReferencesMinimumWordLength.toString()).onChange(async (value) => {
-          if (!/^\s*\d+\s*$/.test(value))
-            console.error(`Cannot set "suggestedReferencesMinimumWordLength" to NaN. Must be integer`);
-          else await this.updateSettingValue('suggestedReferencesMinimumWordLength', parseInt(value, 10));
-        })
-      );
+      .addSlider((slider) => {
+        slider
+          .setLimits(1, 20, 1)
+          .setValue(this.plugin.settings.suggestedReferencesMinimumWordLength)
+          .onChange(async (value) => await this.updateSettingValue('suggestedReferencesMinimumWordLength', value))
+          .setDynamicTooltip();
+      });
 
     new Setting(containerEl)
       .setName('Enable logging')
