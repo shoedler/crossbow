@@ -72,3 +72,9 @@ Keep in mind that these steps are processed in order. For example, take a look a
 2. `npm i` or `yarn` to install dependencies
 3. `npm run build` to build crossbow.
 4. Copy `main.js`, `styles.css`, `manifest.json` into a folder called `crossbow` in your vault's `.obsidian/plugins/` folder.
+
+<hr/>
+If you like this plugin, please consider:
+<br/>
+<br/>
+<a href="https://www.buymeacoffee.com/shoedler"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a beer&emoji=🍺&slug=shoedler&button_colour=ffffff&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" /></a>
