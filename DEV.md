@@ -9,7 +9,7 @@
 ## Refactors
 
 - [x] Refactor handling / updating of `TreeItem`s. Use a reactive approach instead of manually updating the tree.
-- [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax operators)
+- [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax)
 
 ## Releasing new releases
 
