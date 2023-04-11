@@ -11,7 +11,26 @@
 // GNU General Public License for more details.
 
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import CrossbowPlugin, { CrossbowPluginSettings } from './main';
+import CrossbowPlugin from './main';
+
+export interface CrossbowPluginSettings {
+  ignoredWordsCaseSensisitve: string[];
+  suggestInSameFile: boolean;
+  ignoreSuggestionsWhichStartWithLowercaseLetter: boolean;
+  ignoreOccurrencesWhichStartWithLowercaseLetter: boolean;
+  minimumSuggestionWordLength: number;
+
+  useLogging: boolean;
+}
+
+export const DEFAULT_SETTINGS: CrossbowPluginSettings = {
+  ignoredWordsCaseSensisitve: ['image', 'the', 'always', 'some'],
+  suggestInSameFile: false,
+  ignoreSuggestionsWhichStartWithLowercaseLetter: true,
+  ignoreOccurrencesWhichStartWithLowercaseLetter: false,
+  minimumSuggestionWordLength: 3,
+  useLogging: false,
+};
 
 export class CrossbowSettingTab extends PluginSettingTab {
   plugin: CrossbowPlugin;
@@ -30,13 +49,13 @@ export class CrossbowSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Ignored Words')
       .setDesc(
-        'A case-sensitive, comma separated list of words to ignore when searching for linkables. (Whitepaces will be trimmed)'
+        'A case-sensitive, comma separated list of words to ignore when searching for items (Headers, tags). (Whitepaces will be trimmed)'
       )
       .addTextArea((textArea) => {
-        textArea.setValue(this.plugin.settings.ignoredWords?.join(', ') ?? '').onChange(
+        textArea.setValue(this.plugin.settings.ignoredWordsCaseSensisitve?.join(', ') ?? '').onChange(
           async (value) =>
             await this.updateSettingValue(
-              'ignoredWords',
+              'ignoredWordsCaseSensisitve',
               value.split(',').map((word) => word.trim())
             )
         );
@@ -56,22 +75,33 @@ export class CrossbowSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Suggest references in same file')
-      .setDesc('If checked, references (Headers, Tags) to items in the same file will be suggested')
+      .setName('Ignore occurrences which start with a lowercase letter')
+      .setDesc('If checked, occurrences (Words in the active editor) which start with a lowercase letter will be ignored')
       .addToggle((toggle) =>
         toggle
-          .setValue(this.plugin.settings.suggestReferencesInSameFile)
-          .onChange(async (value) => await this.updateSettingValue('suggestReferencesInSameFile', value))
+          .setValue(this.plugin.settings.ignoreOccurrencesWhichStartWithLowercaseLetter)
+          .onChange(
+            async (value) => await this.updateSettingValue('ignoreOccurrencesWhichStartWithLowercaseLetter', value)
+          )
+      );
+
+    new Setting(containerEl)
+      .setName('Make suggestions to items in the same file')
+      .setDesc('If checked, suggestions to items (Headers, Tags) in the same file be created')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.suggestInSameFile)
+          .onChange(async (value) => await this.updateSettingValue('suggestInSameFile', value))
       );
 
     new Setting(containerEl)
       .setName('Minimum word length of suggestions')
-      .setDesc('Defines the min. length a cached word must have for it to be considered a suggestion')
+      .setDesc('Defines the min. length an item (Header, Tag) must have for it to be considered a suggestion')
       .addSlider((slider) => {
         slider
           .setLimits(1, 20, 1)
-          .setValue(this.plugin.settings.suggestedReferencesMinimumWordLength)
-          .onChange(async (value) => await this.updateSettingValue('suggestedReferencesMinimumWordLength', value))
+          .setValue(this.plugin.settings.minimumSuggestionWordLength)
+          .onChange(async (value) => await this.updateSettingValue('minimumSuggestionWordLength', value))
           .setDynamicTooltip();
       });
 
