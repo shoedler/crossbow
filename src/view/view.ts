@@ -17,11 +17,9 @@ import { TreeItem } from './treeItem';
 import { CrossbowTreeItemBuilder } from './treeItemBuilder';
 
 export class CrossbowView extends ItemView {
-  private readonly crossbow: CrossbowPlugin;
-
-  constructor(leaf: WorkspaceLeaf, crossbow: CrossbowPlugin) {
+  constructor(leaf: WorkspaceLeaf) {
     super(leaf);
-    this.crossbow = crossbow;
+    this.contentEl.createSpan({ text: 'Open a note to run crossbow', cls: 'crossbow-view-empty' });
   }
 
   public static viewType = 'crossbow-toolbar';
@@ -52,7 +50,7 @@ export class CrossbowView extends ItemView {
   }
 
   public updateSuggestions(suggestions: Suggestion[], targetEditor: Editor, fileHasChanged: boolean): void {
-    this.crossbow.debugLog(`${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`);
+    CrossbowPlugin.debugLog(`${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`);
 
     if (fileHasChanged) {
       this.clear();

@@ -32,7 +32,7 @@ export interface CacheMatch extends CacheEntry {
 }
 
 export default class CrossbowPlugin extends Plugin {
-  public settings: CrossbowPluginSettings;
+  public static settings: CrossbowPluginSettings;
 
   private _currentFile: TFile;
   public get currentFile(): TFile {
@@ -44,13 +44,17 @@ export default class CrossbowPlugin extends Plugin {
 
   private readonly crossbowCache: CustomCache = {};
 
+  public static debugLog(message: string): void {
+    CrossbowPlugin.settings.useLogging && console.log(`🏹: ${message}`);
+  }
+
   public async onload(): Promise<void> {
     await this.loadSettings();
 
     // Register view elements
     registerCrossbowIcons();
     registerTreeItemElements();
-    this.registerView(CrossbowView.viewType, (leaf) => new CrossbowView(leaf, this));
+    this.registerView(CrossbowView.viewType, (leaf) => new CrossbowView(leaf));
 
     // Ribbon icon to access the crossbow pane
     this.addRibbonIcon('crossbow', 'Crossbow', async (ev: MouseEvent) => {
@@ -67,6 +71,10 @@ export default class CrossbowPlugin extends Plugin {
       });
 
       this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(CrossbowView.viewType)[0]);
+
+      // Run initially
+      this.setActiveFile();
+      this.runWithCacheUpdate(true);
     });
 
     // Settings-tab to configure crossbow
@@ -76,44 +84,44 @@ export default class CrossbowPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
     this.registerEvent(this.app.metadataCache.on('changed', this.onMetadataChange));
 
-    this.debugLog('Crossbow is ready.');
+    CrossbowPlugin.debugLog('Crossbow is ready.');
   }
 
   public onunload(): void {
     Object.assign(this.crossbowCache, {});
 
-    this.getCrossbowView().unload();
-    this.debugLog('Unloaded Crossbow.');
+    this.getCrossbowView()?.unload();
+    CrossbowPlugin.debugLog('Unloaded Crossbow.');
   }
 
   public async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    CrossbowPlugin.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
   public async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
-  }
-
-  public debugLog(message: string): void {
-    this.settings.useLogging && console.log(`🏹: ${message}`);
+    await this.saveData(CrossbowPlugin.settings);
   }
 
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata): void => {
     if (this.metadataChangedTimeout) clearTimeout(this.metadataChangedTimeout);
 
+    if (!this.doesCrossbowViewExist()) return;
+
     this.metadataChangedTimeout = setTimeout(() => {
       // Only update cache for the current file
       this.updateCrossbowCacheEntitiesOfFile(file, cache);
-      this.debugLog(`Metadata cache updated for ${file.basename}.`);
       this.runWithoutCacheUpdate(false);
+      CrossbowPlugin.debugLog(`Metadata cache updated for ${file.basename}.`);
     }, 2600); // This value is arbitrary, but it seems to work well. 'onMetadataChange' get's triggerd every ~2 to ~2.5 seconds.
   };
 
   private onFileOpen = (): void => {
+    if (!this.doesCrossbowViewExist()) return;
+
     const prevCurrentFile = this._currentFile;
 
     this.setActiveFile();
-    this.debugLog('File opened.');
+    CrossbowPlugin.debugLog('File opened.');
 
     if (this.fileOpenTimeout) clearTimeout(this.fileOpenTimeout);
 
@@ -137,7 +145,11 @@ export default class CrossbowPlugin extends Plugin {
     this.getCrossbowView()?.updateSuggestions(data, targetEditor, fileHasChanged);
   }
 
-  private getCrossbowView(): CrossbowView {
+  private doesCrossbowViewExist(): boolean {
+    return this.app.workspace.getLeavesOfType(CrossbowView.viewType).length > 0;
+  }
+
+  private getCrossbowView(): CrossbowView | undefined {
     return app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
   }
 
@@ -162,7 +174,8 @@ export default class CrossbowPlugin extends Plugin {
         const lowercaseCacheKey = cacheKey.toLowerCase();
 
         // If reference is in the same file, and we don't want to suggest references in the same file, skip
-        if (!this.settings.suggestInSameFile && this.crossbowCache[cacheKey].file === this._currentFile) return;
+        if (!CrossbowPlugin.settings.suggestInSameFile && this.crossbowCache[cacheKey].file === this._currentFile)
+          return;
 
         // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
         // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
@@ -172,23 +185,27 @@ export default class CrossbowPlugin extends Plugin {
         }
 
         // If the word is on the ignore list, skip
-        if (this.settings.ignoredWordsCaseSensisitve.includes(word)) return;
+        if (CrossbowPlugin.settings.ignoredWordsCaseSensisitve.includes(word)) return;
 
         // If the word is too short, skip
         if (word.length <= 3) return;
 
         // If the cache key is too short, skip
-        if (cacheKey.length <= this.settings.minimumSuggestionWordLength) return;
+        if (cacheKey.length <= CrossbowPlugin.settings.minimumSuggestionWordLength) return;
 
         // If the word is not a substring of the key or the key is not a substring of the word, skip
         if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false) return;
 
         // If the word does not start with an uppercase letter, skip
-        if (this.settings.ignoreOccurrencesWhichStartWithLowercaseLetter && cacheKey[0] === lowercaseCacheKey[0])
+        if (
+          CrossbowPlugin.settings.ignoreOccurrencesWhichStartWithLowercaseLetter &&
+          cacheKey[0] === lowercaseCacheKey[0]
+        )
           return;
 
         // If the cache key does not start with an uppercase letter, skip
-        if (this.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && word[0] === lowercaseWord[0]) return;
+        if (CrossbowPlugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && word[0] === lowercaseWord[0])
+          return;
 
         // If the word is a case-insensitive exact match, add as a very good suggestion
         if (lowercaseCacheKey === lowercaseWord) {
@@ -226,7 +243,7 @@ export default class CrossbowPlugin extends Plugin {
 
     const metadata = cache ? cache : app.metadataCache.getFileCache(file);
 
-    if (file.basename.length >= this.settings.minimumSuggestionWordLength)
+    if (file.basename.length >= CrossbowPlugin.settings.minimumSuggestionWordLength)
       this.addOrUpdateCacheEntity({ file, text: file.basename, type: 'File' });
 
     if (metadata) {

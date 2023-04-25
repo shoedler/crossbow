@@ -4,11 +4,11 @@
 
 Crossbow is a plugin for [Obsidian](https://obsidian.md).
 
-Boost your Obsidian note-taking workflow with this plugin that offers handy suggestions for links to headings, tags, and files, helping you effortlessly weave a web of interconnected notes and supercharge your note graph. 
+Boost your Obsidian note-taking workflow with this plugin that offers handy suggestions for links to headings, tags, and files, helping you effortlessly weave a web of interconnected notes and supercharge your note graph.
 
 ## How to use
 
-Just open the crossbow sidebar by clicking on the crossbow icon. All the suggestions will appear within the sidebar.
+Just open the crossbow sidebar by clicking on the crossbow icon in the ribbon. All the suggestions will appear within the sidebar.
 
 ### Applying suggestions
 
@@ -24,6 +24,10 @@ which will insert the following link:
 ![image](https://user-images.githubusercontent.com/38029550/229280048-fe7a8e31-8cbf-4090-a7f0-4bf0b83814d7.png)
 
 > In Obsidian a pipe (`|`) inside a link denotes the "display text" of the link. This means that the text after the pipe will be shown instead of the link.
+
+### Temporarily disabling suggestions
+
+You can temporarily disable suggestions by righ-clicking the crossbow icon of the crossbow view and selecting "Close". This will close the sidebar and disable suggestions. To re-enable suggestions, just click the crossbow icon in the ribbon again.
 
 ## Under the hood
 
@@ -46,20 +50,20 @@ To find matches in your current note, it strips the active editors content of an
 
 ### A word about how suggestions are matched
 
-Crossbow is opinionated, but also configurable about how it creates suggestions. 
+Crossbow is opinionated, but also configurable about how it creates suggestions.
 As of 1.1.1 the process of filtering looks like this:
 
-Initially, it gathers all the **word**s in the active editor (current note) and all the cache items (Identified by their **cache key**) in the vault. 
+Initially, it gathers all the **word**s in the active editor (current note) and all the cache items (Identified by their **cache key**) in the vault.
 Then, it follows a simple process for each **word** and **cache key** to create a suggestion:
 
-1. If the **cache key** stems from the active editor (current note), skip. Configurable, see setting *Make suggestions to items in the same file*.
+1. If the **cache key** stems from the active editor (current note), skip. Configurable, see setting _Make suggestions to items in the same file_.
 2. If we have an exact match (case sensitive) between **word** and **cache key**, add it as a very good suggestion (ranked as "🏆"). End of process.
-3. If the **word** is on the ignore list, skip. Configurable, see setting *Ignored words*.
+3. If the **word** is on the ignore list, skip. Configurable, see setting _Ignored words_.
 4. If the **word** is too short (Currently meaning less than 3 chars), skip.
-5. If the **cache key** is too short, skip. Configurable, see setting *Minimum word length of suggestions*.
+5. If the **cache key** is too short, skip. Configurable, see setting _Minimum word length of suggestions_.
 6. If the **word** is not a substring of the **cache key** or vice versa, skip
-7. If the **word** does not start with an uppercase letter, skip. Configurable, see setting *Ignore suggestions which start with a lowercase letter*.
-8. If the **cache key** does not start with an uppercase letter, skip. Configurable, see setting *Ignore suggestions which start with a lowercase letter*.
+7. If the **word** does not start with an uppercase letter, skip. Configurable, see setting _Ignore suggestions which start with a lowercase letter_.
+8. If the **cache key** does not start with an uppercase letter, skip. Configurable, see setting _Ignore suggestions which start with a lowercase letter_.
 9. If we have an exact match (case insensitive) between **word** and **cache key**, add it as a good suggestion (ranked as "🥇"). End of process.
 10. If we have a similarity of less than 20% length-wise between **word** and **cache key**, add it as a 'not-very-good' suggestion (ranked as "🥉"). End of process.
 11. Else, add it as a mediocre suggestion (ranked as "🥈"). End of process.
