@@ -1,7 +1,7 @@
 {
   "id": "crossbow",
   "name": "Crossbow",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "minAppVersion": "1.1.1",
   "description": "Find possible backlinks in your notes.",
   "author": "shoedler",
