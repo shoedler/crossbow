@@ -12,82 +12,51 @@
 
 import { EditorPosition } from 'obsidian';
 import { CacheMatch } from './main';
-import { TreeItem, TreeItemBase } from './view/treeItem';
+import { ITreeVisualizable } from './view/treeItem';
 
-export class Suggestion extends TreeItem<string> {
-  public constructor(word: string, public readonly cacheMatches: CacheMatch[]) {
-    super(word);
-  }
-
-  public static register(): void {
-    customElements.define('crossbow-suggestion', Suggestion);
-  }
+export class Suggestion implements ITreeVisualizable {
+  public constructor(public readonly word: string, public readonly occurrences: Occurrence[]) {}
 
   public get hash(): string {
-    return this.value;
+    return this.word;
   }
   public get text(): string {
-    return this.value;
+    return this.word;
   }
 
-  public getChildren() {
-    return Array.from(this.childrenWrapper.children) as Occurrence[];
+  public get matches(): Match[] {
+    return this.occurrences[0].matches;
   }
 
   public sortChildren(): void {
-    this.getChildren()
-      .sort((a, b) => a.value.line - b.value.line)
-      .forEach((child) => {
-        this.childrenWrapper.appendChild(child);
-        child.sortChildren();
-      });
+    this.occurrences.sort((a, b) => a.editorPosition.line - b.editorPosition.line).forEach((occ) => occ.sortChildren());
   }
 }
 
-export class Occurrence extends TreeItem<EditorPosition> {
-  public constructor(value: EditorPosition) {
-    super(value);
-  }
-
-  public static register(): void {
-    customElements.define('crossbow-occurrence', Occurrence);
-  }
+export class Occurrence implements ITreeVisualizable {
+  public constructor(public readonly editorPosition: EditorPosition, public readonly matches: Match[]) {}
 
   public get hash(): string {
-    return `${this.value.line}:${this.value.ch}`;
+    return `${this.editorPosition.line}:${this.editorPosition.ch}`;
   }
   public get text(): string {
-    return `On line ${this.value.line}:${this.value.ch}`;
-  }
-
-  public getChildren() {
-    return Array.from(this.childrenWrapper.children) as Match[];
+    return `On line ${this.editorPosition.line}:${this.editorPosition.ch}`;
   }
 
   public sortChildren(): void {
-    this.getChildren()
-      .sort((a, b) => a.value.rank.codePointAt(0)! - b.value.rank.codePointAt(0)!)
-      .forEach((child) => {
-        this.childrenWrapper.appendChild(child);
-      });
+    this.matches.sort((a, b) => a.cacheMatch.rank.codePointAt(0)! - b.cacheMatch.rank.codePointAt(0)!);
   }
 }
 
-export class Match extends TreeItemBase<CacheMatch> {
-  public constructor(value: CacheMatch) {
-    super(value);
-  }
-
-  public static register(): void {
-    customElements.define('crossbow-match', Match);
-  }
+export class Match implements ITreeVisualizable {
+  public constructor(public readonly cacheMatch: CacheMatch) {}
 
   public get hash(): string {
-    return `${this.value.text}|${this.value.file.path}`;
+    return `${this.cacheMatch.text}|${this.cacheMatch.file.path}`;
   }
 
   public get text(): string {
-    return `${this.value.rank} ${this.value.text}`;
+    return `${this.cacheMatch.rank} ${this.cacheMatch.text}`;
   }
 
   public sortChildren(): void {}

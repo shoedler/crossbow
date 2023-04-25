@@ -12,17 +12,37 @@
 
 import { ButtonComponent, getIcon } from 'obsidian';
 
-export abstract class TreeItemBase<TData> extends HTMLElement {
+export interface ITreeVisualizable {
+  get hash(): string;
+  get text(): string;
+
+  sortChildren(): void;
+}
+
+export const registerTreeItemElements = () => {
+  TreeItem.register();
+  TreeItemLeaf.register();
+};
+
+export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
   private readonly inner: HTMLDivElement;
   private readonly suffix: HTMLSpanElement;
   private readonly flair: HTMLSpanElement;
-  private readonly buttons: ButtonComponent[] = [];
+  protected readonly buttons: ButtonComponent[] = [];
   protected readonly mainWrapper: HTMLDivElement;
   protected readonly flairWrapper: HTMLDivElement;
   public readonly value: TData;
 
-  public abstract get hash(): string;
-  public abstract get text(): string;
+  public get hash(): string {
+    return this.value.hash;
+  }
+  public get text(): string {
+    return this.value.text;
+  }
+
+  public static register(): void {
+    customElements.define('crossbow-tree-item-leaf', TreeItemLeaf);
+  }
 
   constructor(value: TData) {
     super();
@@ -35,7 +55,7 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
 
     this.inner = this.mainWrapper.createDiv({
       cls: 'tree-item-inner tree-item-inner-extensions',
-      text: this.getCaptionText(),
+      text: this.text,
     });
     this.flairWrapper = this.mainWrapper.createDiv({
       cls: 'tree-item-flair-outer',
@@ -47,12 +67,6 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
     this.flair = this.flairWrapper.createEl('span', {
       cls: 'tree-item-flair',
     });
-  }
-
-  public abstract sortChildren(): void;
-
-  public getCaptionText(): string {
-    return this.text;
   }
 
   public setDisable() {
@@ -84,12 +98,19 @@ export abstract class TreeItemBase<TData> extends HTMLElement {
   }
 }
 
-export abstract class TreeItem<TData> extends TreeItemBase<TData> {
+export class TreeItem<TData extends ITreeVisualizable> extends TreeItemLeaf<TData> {
   protected readonly childrenWrapper: HTMLDivElement;
   private readonly iconWrapper: HTMLDivElement;
 
-  public constructor(value: TData) {
+  private childrenFactory: ((self: TreeItem<TData>) => TreeItemLeaf<any>[]) | null = null;
+
+  public static register(): void {
+    customElements.define('crossbow-tree-item', TreeItem);
+  }
+
+  public constructor(value: TData, childrenFactory: (self: TreeItem<TData>) => TreeItemLeaf<any>[]) {
     super(value);
+    this.childrenFactory = childrenFactory;
 
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
@@ -109,13 +130,16 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
     this.mainWrapper.addEventListener('click', () => (this.isCollapsed() ? this.expand() : this.collapse()));
   }
 
-  public abstract getChildren(): TreeItemBase<any>[];
-
   public isCollapsed() {
     return this.hasClass('is-collapsed');
   }
 
   public expand() {
+    if (this.childrenFactory) {
+      this.addTreeItems(this.childrenFactory(this));
+      this.childrenFactory = null;
+    }
+
     this.removeClass('is-collapsed');
     this.childrenWrapper.style.display = 'block';
   }
@@ -128,10 +152,15 @@ export abstract class TreeItem<TData> extends TreeItemBase<TData> {
   public setDisable() {
     super.setDisable();
     this.mainWrapper.style.textDecoration = 'line-through';
-    Array.from(this.childrenWrapper.children).forEach((child) => (child as TreeItemBase<any>).setDisable());
+    this.buttons.forEach((button) => button.disabled = true)
+    this.getTreeItems().forEach((child) => child.setDisable());
   }
 
-  public addTreeItems(children: TreeItemBase<any>[]) {
+  public addTreeItems(children: TreeItemLeaf<any>[]) {
     this.childrenWrapper.replaceChildren(...children);
+  }
+
+  public getTreeItems(): TreeItemLeaf<any>[] {
+    return Array.from(this.childrenWrapper.children) as TreeItemLeaf<any>[];
   }
 }

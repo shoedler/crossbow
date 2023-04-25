@@ -26,8 +26,11 @@
   height: 12px !important;                  /* Obsidian Button class overrides */
   stroke-width: 2.5px !important;               /* Obsidian Button class overrides */
 }
+.tree-item-button:disabled {
+  opacity: calc(var(--icon-opacity) * 0.5);
+}
 
-.tree-item-button:hover {
+.tree-item-button:not(:disabled):hover {
   opacity: var(--icon-opacity-active);
   color: var(--icon-color-focused);
 }

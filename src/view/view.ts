@@ -10,9 +10,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { Editor, EditorPosition, ItemView, WorkspaceLeaf } from 'obsidian';
-import { Match, Occurrence, Suggestion } from 'src/suggestion';
-import CrossbowPlugin, { CacheMatch } from 'src/main';
+import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
+import { Suggestion } from 'src/suggestion';
+import CrossbowPlugin from 'src/main';
+import { TreeItem } from './treeItem';
+import { CrossbowTreeItemBuilder } from './treeItemBuilder';
 
 export class CrossbowView extends ItemView {
   private readonly crossbow: CrossbowPlugin;
@@ -45,143 +47,59 @@ export class CrossbowView extends ItemView {
     this.contentEl.empty();
   }
 
-  private getCurrentSuggestions(): Suggestion[] {
-    return this.contentEl.children.length > 0 ? (Array.from(this.contentEl.children) as Suggestion[]) : [];
+  private getCurrentSuggestions(): TreeItem<Suggestion>[] {
+    return this.contentEl.children.length > 0 ? (Array.from(this.contentEl.children) as TreeItem<Suggestion>[]) : [];
   }
 
-  public updateSuggestions(suggestions: Suggestion[], fileHasChanged: boolean): void {
+  public updateSuggestions(suggestions: Suggestion[], targetEditor: Editor, fileHasChanged: boolean): void {
     this.crossbow.debugLog(`${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`);
-
-    const currentSuggestions = this.getCurrentSuggestions();
 
     if (fileHasChanged) {
       this.clear();
     }
 
+    const currentSuggestionTreeItems = this.getCurrentSuggestions();
+
     suggestions.forEach((suggestion) => {
       // Find if this Suggestion already exists
-      const index = currentSuggestions.findIndex((item) => item.hash === suggestion.hash);
-      const existingSuggestion = index !== -1 ? currentSuggestions.splice(index, 1)[0] : undefined;
+      const index = currentSuggestionTreeItems.findIndex((item) => item.hash === suggestion.hash);
+      const existingSuggestion = index !== -1 ? currentSuggestionTreeItems.splice(index, 1)[0] : undefined;
 
-      const expandedOccurrencesHashes = existingSuggestion
-        ? existingSuggestion
-            .getChildren()
-            .filter((item) => !item.isCollapsed())
-            .map((item) => item.hash)
-        : [];
+      const suggestionTreeItem = CrossbowTreeItemBuilder.createSuggestionTreeItem(
+        suggestion,
+        this.app.fileManager,
+        targetEditor
+      );
 
-      suggestion.getChildren().forEach((occurrence) => {
-        // Toggle expanded state, if it was expanded before
-        if (expandedOccurrencesHashes.includes(occurrence.hash)) {
-          occurrence.expand();
-        }
-      });
-
-      // Insert / append the new suggestion, depending on whether it already existed
       if (existingSuggestion) {
-        existingSuggestion.replaceWith(suggestion);
-        existingSuggestion.isCollapsed() ? suggestion.collapse() : suggestion.expand();
-        existingSuggestion?.remove();
+        const expandedOccurrencesHashes = existingSuggestion
+          .getTreeItems()
+          .filter((item) => !(item as TreeItem<any>).isCollapsed())
+          .map((item) => item.hash);
+
+        suggestionTreeItem.getTreeItems().forEach((occurrence) => {
+          // Toggle expanded state, if it was expanded before
+          if (expandedOccurrencesHashes.includes(occurrence.hash)) {
+            (occurrence as TreeItem<any>).expand();
+          }
+        });
+
+        // Insert / append the new suggestion, depending on whether it already existed
+        this.contentEl.insertAfter(suggestionTreeItem, existingSuggestion);
+        existingSuggestion.isCollapsed() ? suggestionTreeItem.collapse() : suggestionTreeItem.expand();
+        existingSuggestion.remove();
       } else {
-        this.contentEl.appendChild(suggestion);
+        // Insert the new suggestion at the correct position. They are sorted by localeCompare of their 'hash' property
+        const index = currentSuggestionTreeItems.findIndex((item) => suggestion.hash.localeCompare(item.hash) < 0);
+        if (index === -1) {
+          this.contentEl.appendChild(suggestionTreeItem);
+        } else {
+          this.contentEl.insertBefore(suggestionTreeItem, currentSuggestionTreeItems[index]);
+        }
       }
     });
 
     // Now, we're left with the existing suggestions that we need to remove
-    currentSuggestions.forEach((item) => item.remove());
-
-    // Sort
-    (Array.from(this.contentEl.children) as Suggestion[])
-      .sort((a, b) => a.hash.localeCompare(b.hash))
-      .forEach((child) => {
-        this.contentEl.appendChild(child);
-        child.sortChildren();
-      });
-  }
-
-  public createSuggestion(
-    word: string,
-    editorPositions: EditorPosition[],
-    cacheMatches: CacheMatch[],
-    targetEditor: Editor
-  ): Suggestion {
-    const suggestion = new Suggestion(word, cacheMatches);
-    const occurrences = editorPositions.map((p) => new Occurrence(p));
-
-    // Configure Occurrences
-    occurrences.forEach((occurrence) => {
-      // Create and add matches to occurrence, always using the **same** cacheMatches array
-      const matches = suggestion.cacheMatches.map((m) => new Match(m));
-      occurrence.addTreeItems(matches);
-
-      // Scroll into view action...
-      const scrollIntoView = () => {
-        const occurrenceEnd = {
-          ch: occurrence.value.ch + suggestion.hash.length,
-          line: occurrence.value.line,
-        } as EditorPosition;
-
-        targetEditor.setSelection(occurrence.value, occurrenceEnd);
-        targetEditor.scrollIntoView({ from: occurrence.value, to: occurrenceEnd }, true);
-      };
-
-      // ...Can be invoked via flair button...
-      occurrence.addButton('Scroll into View', 'lucide-scroll', (ev: MouseEvent) => {
-        scrollIntoView();
-        ev.preventDefault();
-        ev.stopPropagation();
-      });
-
-      // ...As well as when expanding the suggestions, if it's collapsed. Greatly improves UX
-      occurrence.addOnClick(() => {
-        if (!occurrence.isCollapsed()) scrollIntoView();
-      });
-
-      // Configure Matches
-      occurrence.getChildren().forEach((match) => {
-        const link = match.value.item
-          ? this.app.fileManager.generateMarkdownLink(
-              match.value.file,
-              match.value.text,
-              '#' + match.value.text,
-              suggestion.hash
-            )
-          : this.app.fileManager.generateMarkdownLink(match.value.file, match.value.text, undefined, suggestion.hash);
-
-        // 'Use' button inserts backlink & disables the occurrence
-        match.addButton('Use', 'lucide-inspect', () => {
-          occurrence.getChildren().forEach((o) => o.setDisable());
-
-          const occurrenceEnd = {
-            ch: occurrence.value.ch + suggestion.hash.length,
-            line: occurrence.value.line,
-          } as EditorPosition;
-
-          targetEditor.replaceRange(link, occurrence.value, occurrenceEnd);
-        });
-
-        // Go to source action
-        match.addButton('Go To Source', 'lucide-search', () => {
-          console.warn("🏹: 'Go To Source' is not yet implemented");
-        });
-
-        match.addTextSuffix(match.value.type);
-      });
-    });
-
-    suggestion.addTreeItems(occurrences);
-
-    // Add flair
-    const ranks = new Set<CacheMatch['rank']>();
-    suggestion.cacheMatches.forEach((match) => ranks.add(match.rank));
-
-    const availableMatchRanks = Array.from(ranks)
-      .sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!)
-      .join('');
-
-    suggestion.addFlair(availableMatchRanks);
-    suggestion.addTextSuffix(`(${occurrences.length.toString()})`);
-
-    return suggestion;
+    currentSuggestionTreeItems.forEach((item) => item.remove());
   }
 }

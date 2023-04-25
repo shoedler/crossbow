@@ -16,6 +16,7 @@ import { CacheItem, Editor, MarkdownView, Plugin, TFile, CachedMetadata } from '
 import { CrossbowPluginSettings, CrossbowSettingTab, DEFAULT_SETTINGS } from './settings';
 import './editorExtension';
 import { Match, Occurrence, Suggestion } from './suggestion';
+import { registerTreeItemElements } from './view/treeItem';
 
 type CustomCache = { [key: string]: CacheEntry };
 
@@ -48,9 +49,7 @@ export default class CrossbowPlugin extends Plugin {
 
     // Register view elements
     registerCrossbowIcons();
-    Suggestion.register();
-    Occurrence.register();
-    Match.register();
+    registerTreeItemElements();
     this.registerView(CrossbowView.viewType, (leaf) => new CrossbowView(leaf, this));
 
     // Ribbon icon to access the crossbow pane
@@ -100,8 +99,7 @@ export default class CrossbowPlugin extends Plugin {
   }
 
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata): void => {
-    if (this.metadataChangedTimeout)
-      clearTimeout(this.metadataChangedTimeout);
+    if (this.metadataChangedTimeout) clearTimeout(this.metadataChangedTimeout);
 
     this.metadataChangedTimeout = setTimeout(() => {
       // Only update cache for the current file
@@ -122,8 +120,9 @@ export default class CrossbowPlugin extends Plugin {
     this.fileOpenTimeout = setTimeout(() => {
       if (!prevCurrentFile) this.runWithCacheUpdate(true); // Initial run
       else if (this._currentFile !== prevCurrentFile) this.runWithoutCacheUpdate(true); // Opened a different file
-    }, 500);
+    }, 100);
   };
+
   public runWithCacheUpdate(fileHasChanged: boolean): void {
     const files = this.app.vault.getFiles();
     files.forEach((file) => this.updateCrossbowCacheEntitiesOfFile(file));
@@ -131,8 +130,11 @@ export default class CrossbowPlugin extends Plugin {
   }
 
   public runWithoutCacheUpdate(fileHasChanged: boolean): void {
-    const data = this.getSuggestionsInActiveEditor();
-    this.getCrossbowView()?.updateSuggestions(data, fileHasChanged);
+    const targetEditor = this.app.workspace.activeEditor?.editor;
+    if (!targetEditor) return;
+
+    const data = this.getSuggestionsInEditor(targetEditor);
+    this.getCrossbowView()?.updateSuggestions(data, targetEditor, fileHasChanged);
   }
 
   private getCrossbowView(): CrossbowView {
@@ -143,14 +145,11 @@ export default class CrossbowPlugin extends Plugin {
     this.crossbowCache[entity.text] = entity;
   }
 
-  private getSuggestionsInActiveEditor(): Suggestion[] {
+  private getSuggestionsInEditor(targetEditor: Editor): Suggestion[] {
     const result: Suggestion[] = [];
-    const targetEditor = this.app.workspace.activeEditor?.editor;
-
     if (!targetEditor) return result;
 
     const wordLookup = targetEditor.getWordLookup();
-
     if (!wordLookup) return result;
 
     Object.entries(wordLookup).forEach((entry) => {
@@ -163,8 +162,7 @@ export default class CrossbowPlugin extends Plugin {
         const lowercaseCacheKey = cacheKey.toLowerCase();
 
         // If reference is in the same file, and we don't want to suggest references in the same file, skip
-        if (!this.settings.suggestInSameFile && this.crossbowCache[cacheKey].file === this._currentFile)
-          return;
+        if (!this.settings.suggestInSameFile && this.crossbowCache[cacheKey].file === this._currentFile) return;
 
         // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
         // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
@@ -175,7 +173,7 @@ export default class CrossbowPlugin extends Plugin {
 
         // If the word is on the ignore list, skip
         if (this.settings.ignoredWordsCaseSensisitve.includes(word)) return;
-        
+
         // If the word is too short, skip
         if (word.length <= 3) return;
 
@@ -183,25 +181,14 @@ export default class CrossbowPlugin extends Plugin {
         if (cacheKey.length <= this.settings.minimumSuggestionWordLength) return;
 
         // If the word is not a substring of the key or the key is not a substring of the word, skip
-        if (
-          (lowercaseCacheKey.includes(lowercaseWord) ||
-            lowercaseWord.includes(lowercaseCacheKey)) === false
-        )
-          return;
+        if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false) return;
 
         // If the word does not start with an uppercase letter, skip
-        if (
-          this.settings.ignoreOccurrencesWhichStartWithLowercaseLetter &&
-          cacheKey[0] === lowercaseCacheKey[0]
-        )
+        if (this.settings.ignoreOccurrencesWhichStartWithLowercaseLetter && cacheKey[0] === lowercaseCacheKey[0])
           return;
 
         // If the cache key does not start with an uppercase letter, skip
-        if (
-          this.settings.ignoreSuggestionsWhichStartWithLowercaseLetter &&
-          word[0] === lowercaseWord[0]
-        )
-          return;
+        if (this.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && word[0] === lowercaseWord[0]) return;
 
         // If the word is a case-insensitive exact match, add as a very good suggestion
         if (lowercaseCacheKey === lowercaseWord) {
@@ -220,9 +207,14 @@ export default class CrossbowPlugin extends Plugin {
       });
 
       if (matchSet.size > 0) {
-        result.push(this.getCrossbowView().createSuggestion(word, editorPositions, Array.from(matchSet), targetEditor));
+        const matches = Array.from(matchSet).map((m) => new Match(m));
+        const occurrences = editorPositions.map((p) => new Occurrence(p, matches));
+        result.push(new Suggestion(word, occurrences));
       }
     });
+
+    // Sort the result
+    result.sort((a, b) => a.hash.localeCompare(b.hash)).forEach((suggestion) => suggestion.sortChildren());
 
     return result;
   }
