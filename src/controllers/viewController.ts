@@ -11,20 +11,52 @@
 // GNU General Public License for more details.
 
 import { Editor, EditorPosition } from 'obsidian';
-import { CacheMatch } from 'src/main';
-import { Match, Occurrence, Suggestion } from 'src/suggestion';
-import { TreeItem, TreeItemLeaf } from './treeItem';
+import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
+import { CacheMatch } from 'src/services/indexingService';
+import { TreeItem, TreeItemLeaf } from 'src/view/treeItem';
+import { CrossbowView } from 'src/view/view';
 
-export class CrossbowTreeItemBuilder {
-  public static createSuggestionTreeItem(
-    suggestion: Suggestion,
-    markdownLinkGenerator: {
-      generateMarkdownLink: (file: CacheMatch['file'], text: string, hash?: string, word?: string) => string;
-    },
-    targetEditor: Editor
-  ): TreeItem<Suggestion> {
+export class CrossbowViewController {
+  public async revealOrCreateView(): Promise<void> {
+    const existing = app.workspace.getLeavesOfType(CrossbowView.viewType);
+
+    if (existing.length) {
+      app.workspace.revealLeaf(existing[0]);
+      return;
+    }
+
+    await app.workspace.getRightLeaf(false).setViewState({
+      type: CrossbowView.viewType,
+      active: true,
+    });
+
+    app.workspace.revealLeaf(app.workspace.getLeavesOfType(CrossbowView.viewType)[0]);
+  }
+
+  public doesCrossbowViewExist(): boolean {
+    return app.workspace.getLeavesOfType(CrossbowView.viewType).length > 0;
+  }
+
+  public unloadView(): void {
+    this.getCrossbowView()?.unload();
+  }
+
+  private getCrossbowView(): CrossbowView | undefined {
+    return app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
+  }
+
+  public addOrUpdateSuggestions(suggestions: Suggestion[], targetEditor: Editor, fileHasChanged: boolean): void {
+    const view = this.getCrossbowView();
+
+    if (!view) return;
+    if (fileHasChanged) view.clear();
+
+    view.addOrUpdateSuggestions(suggestions, targetEditor);
+  }
+
+  public static createSuggestionTreeItem(suggestion: Suggestion, targetEditor: Editor): TreeItem<Suggestion> {
     const lazySuggestionChildrenBuilder = () =>
-      CrossbowTreeItemBuilder.createOccurrenceTreeItems(suggestion, markdownLinkGenerator, targetEditor);
+      CrossbowViewController.createOccurrenceTreeItems(suggestion, targetEditor);
 
     const suggestionTreeItem = new TreeItem(suggestion, lazySuggestionChildrenBuilder);
 
@@ -42,13 +74,7 @@ export class CrossbowTreeItemBuilder {
     return suggestionTreeItem;
   }
 
-  public static createOccurrenceTreeItems(
-    suggestion: Suggestion,
-    markdownLinkGenerator: {
-      generateMarkdownLink: (file: CacheMatch['file'], text: string, hash?: string, word?: string) => string;
-    },
-    targetEditor: Editor
-  ): TreeItem<Occurrence>[] {
+  public static createOccurrenceTreeItems(suggestion: Suggestion, targetEditor: Editor): TreeItem<Occurrence>[] {
     return suggestion.occurrences.map((occurrence) => {
       const occurrenceEnd = {
         ch: occurrence.editorPosition.ch + suggestion.word.length,
@@ -56,13 +82,7 @@ export class CrossbowTreeItemBuilder {
       } as EditorPosition;
 
       const lazyOccurrenceChildrenBuilder = (self: TreeItem<Occurrence>) =>
-        CrossbowTreeItemBuilder.createMatchTreeItems(
-          suggestion.word,
-          self,
-          occurrenceEnd,
-          markdownLinkGenerator,
-          targetEditor
-        );
+        CrossbowViewController.createMatchTreeItems(suggestion.word, self, occurrenceEnd, targetEditor);
 
       const occurrenceTreeItem = new TreeItem(occurrence, lazyOccurrenceChildrenBuilder);
 
@@ -93,22 +113,19 @@ export class CrossbowTreeItemBuilder {
     word: Suggestion['word'],
     occurrenceTreeItem: TreeItem<Occurrence>,
     occurrenceEnd: EditorPosition,
-    markdownLinkGenerator: {
-      generateMarkdownLink: (file: CacheMatch['file'], text: string, hash?: string, word?: string) => string;
-    },
     targetEditor: Editor
   ): TreeItemLeaf<Match>[] {
     return occurrenceTreeItem.value.matches.map((match) => {
       const matchTreeItem = new TreeItemLeaf(match);
 
       const link = match.cacheMatch.item
-        ? markdownLinkGenerator.generateMarkdownLink(
+        ? app.fileManager.generateMarkdownLink(
             match.cacheMatch.file,
             match.cacheMatch.text,
             '#' + match.cacheMatch.text,
             word
           )
-        : markdownLinkGenerator.generateMarkdownLink(match.cacheMatch.file, match.cacheMatch.text, undefined, word);
+        : app.fileManager.generateMarkdownLink(match.cacheMatch.file, match.cacheMatch.text, undefined, word);
 
       // 'Use' button inserts backlink & disables the occurrence
       matchTreeItem.addButton('Use', 'lucide-inspect', () => {

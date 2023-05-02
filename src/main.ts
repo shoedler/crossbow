@@ -12,44 +12,44 @@
 
 import { CrossbowView } from './view/view';
 import { registerCrossbowIcons } from './icons';
-import { CacheItem, Editor, MarkdownView, Plugin, TFile, CachedMetadata } from 'obsidian';
-import { CrossbowPluginSettings, CrossbowSettingTab, DEFAULT_SETTINGS } from './settings';
-import './editorExtension';
-import { Match, Occurrence, Suggestion } from './suggestion';
+import { MarkdownView, Plugin, TFile, CachedMetadata, App, PluginManifest } from 'obsidian';
+import { CrossbowSettingTab } from './settings';
 import { registerTreeItemElements } from './view/treeItem';
-
-type CustomCache = { [key: string]: CacheEntry };
-
-export interface CacheEntry {
-  file: TFile;
-  item?: CacheItem;
-  text: string;
-  type: 'Tag' | 'File' | 'Heading';
-}
-
-export interface CacheMatch extends CacheEntry {
-  rank: '🏆' | '🥇' | '🥈' | '🥉';
-}
+import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './services/settingsService';
+import { CrossbowIndexingService } from './services/indexingService';
+import { CrossbowLoggingService } from './services/loggingService';
+import { CrossbowTokenizationService } from './services/tokenizationService';
+import { CrossbowSuggestionsService } from './services/suggestionsService';
+import { CrossbowViewController } from './controllers/viewController';
 
 export default class CrossbowPlugin extends Plugin {
-  public static settings: CrossbowPluginSettings;
+  private readonly settingsService: CrossbowSettingsService;
+  private readonly loggingService: CrossbowLoggingService;
+  private readonly indexingService: CrossbowIndexingService;
+  private readonly tokenizationService: CrossbowTokenizationService;
+  private readonly suggestionsService: CrossbowSuggestionsService;
+  private readonly viewController: CrossbowViewController;
 
-  private _currentFile: TFile;
-  public get currentFile(): TFile {
-    return this._currentFile;
-  }
-
+  private currentFile: TFile;
   private metadataChangedTimeout: ReturnType<typeof setTimeout>;
   private fileOpenTimeout: ReturnType<typeof setTimeout>;
 
-  private readonly crossbowCache: CustomCache = {};
+  public constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
 
-  public static debugLog(message: string): void {
-    CrossbowPlugin.settings.useLogging && console.log(`🏹: ${message}`);
+    this.settingsService = new CrossbowSettingsService(this.onSettingsChanged);
+    this.loggingService = new CrossbowLoggingService(this.settingsService);
+    this.indexingService = new CrossbowIndexingService(this.settingsService);
+    this.tokenizationService = new CrossbowTokenizationService();
+    this.suggestionsService = new CrossbowSuggestionsService(this.settingsService, this.indexingService);
+
+    this.viewController = new CrossbowViewController();
   }
 
   public async onload(): Promise<void> {
-    await this.loadSettings();
+    // Load settings
+    const settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData()) as CrossbowPluginSettings;
+    this.settingsService.setSettings(settings); // Set, but don't save so we don't trigger a run
 
     // Register view elements
     registerCrossbowIcons();
@@ -58,19 +58,7 @@ export default class CrossbowPlugin extends Plugin {
 
     // Ribbon icon to access the crossbow pane
     this.addRibbonIcon('crossbow', 'Crossbow', async (ev: MouseEvent) => {
-      const existing = this.app.workspace.getLeavesOfType(CrossbowView.viewType);
-
-      if (existing.length) {
-        this.app.workspace.revealLeaf(existing[0]);
-        return;
-      }
-
-      await this.app.workspace.getRightLeaf(false).setViewState({
-        type: CrossbowView.viewType,
-        active: true,
-      });
-
-      this.app.workspace.revealLeaf(this.app.workspace.getLeavesOfType(CrossbowView.viewType)[0]);
+      await this.viewController.revealOrCreateView();
 
       // Run initially
       this.setActiveFile();
@@ -78,62 +66,57 @@ export default class CrossbowPlugin extends Plugin {
     });
 
     // Settings-tab to configure crossbow
-    this.addSettingTab(new CrossbowSettingTab(this.app, this));
+    this.addSettingTab(new CrossbowSettingTab(this.app, this, this.settingsService));
 
     // Register event handlers
     this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
     this.registerEvent(this.app.metadataCache.on('changed', this.onMetadataChange));
 
-    CrossbowPlugin.debugLog('Crossbow is ready.');
+    this.loggingService.debugLog('Crossbow is ready.');
   }
 
   public onunload(): void {
-    Object.assign(this.crossbowCache, {});
-
-    this.getCrossbowView()?.unload();
-    CrossbowPlugin.debugLog('Unloaded Crossbow.');
-  }
-
-  public async loadSettings(): Promise<void> {
-    CrossbowPlugin.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-
-  public async saveSettings(): Promise<void> {
-    await this.saveData(CrossbowPlugin.settings);
+    this.viewController.unloadView();
+    this.indexingService.clearCache();
+    this.loggingService.debugLog('Unloaded Crossbow.');
   }
 
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata): void => {
     if (this.metadataChangedTimeout) clearTimeout(this.metadataChangedTimeout);
 
-    if (!this.doesCrossbowViewExist()) return;
+    if (!this.viewController.doesCrossbowViewExist()) return;
 
     this.metadataChangedTimeout = setTimeout(() => {
       // Only update cache for the current file
-      this.updateCrossbowCacheEntitiesOfFile(file, cache);
+      this.indexingService.indexFile(file, cache);
       this.runWithoutCacheUpdate(false);
-      CrossbowPlugin.debugLog(`Metadata cache updated for ${file.basename}.`);
+      this.loggingService.debugLog(`Metadata cache updated for ${file.basename}.`);
     }, 2600); // This value is arbitrary, but it seems to work well. 'onMetadataChange' get's triggerd every ~2 to ~2.5 seconds.
   };
 
   private onFileOpen = (): void => {
-    if (!this.doesCrossbowViewExist()) return;
+    if (!this.viewController.doesCrossbowViewExist()) return;
 
-    const prevCurrentFile = this._currentFile;
+    const prevCurrentFile = this.currentFile;
 
     this.setActiveFile();
-    CrossbowPlugin.debugLog('File opened.');
+    this.loggingService.debugLog('File opened.');
 
     if (this.fileOpenTimeout) clearTimeout(this.fileOpenTimeout);
 
     this.fileOpenTimeout = setTimeout(() => {
       if (!prevCurrentFile) this.runWithCacheUpdate(true); // Initial run
-      else if (this._currentFile !== prevCurrentFile) this.runWithoutCacheUpdate(true); // Opened a different file
+      else if (this.currentFile !== prevCurrentFile) this.runWithoutCacheUpdate(true); // Opened a different file
     }, 100);
   };
 
+  private onSettingsChanged = async (settings: CrossbowPluginSettings) => {
+    await this.saveData(settings);
+    this.runWithCacheUpdate(true);
+  };
+
   public runWithCacheUpdate(fileHasChanged: boolean): void {
-    const files = this.app.vault.getFiles();
-    files.forEach((file) => this.updateCrossbowCacheEntitiesOfFile(file));
+    this.indexingService.indexVault(this.app.vault);
     this.runWithoutCacheUpdate(fileHasChanged);
   }
 
@@ -141,137 +124,15 @@ export default class CrossbowPlugin extends Plugin {
     const targetEditor = this.app.workspace.activeEditor?.editor;
     if (!targetEditor) return;
 
-    const data = this.getSuggestionsInEditor(targetEditor);
-    this.getCrossbowView()?.updateSuggestions(data, targetEditor, fileHasChanged);
-  }
-
-  private doesCrossbowViewExist(): boolean {
-    return this.app.workspace.getLeavesOfType(CrossbowView.viewType).length > 0;
-  }
-
-  private getCrossbowView(): CrossbowView | undefined {
-    return app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
-  }
-
-  private addOrUpdateCacheEntity(entity: CacheEntry): void {
-    this.crossbowCache[entity.text] = entity;
-  }
-
-  private getSuggestionsInEditor(targetEditor: Editor): Suggestion[] {
-    const result: Suggestion[] = [];
-    if (!targetEditor) return result;
-
-    const wordLookup = targetEditor.getWordLookup();
-    if (!wordLookup) return result;
-
-    Object.entries(wordLookup).forEach((entry) => {
-      const [word, editorPositions] = entry;
-      const matchSet: Set<CacheMatch> = new Set();
-
-      // Find matches
-      Object.keys(this.crossbowCache).forEach((cacheKey) => {
-        const lowercaseWord = word.toLowerCase();
-        const lowercaseCacheKey = cacheKey.toLowerCase();
-
-        // If reference is in the same file, and we don't want to suggest references in the same file, skip
-        if (!CrossbowPlugin.settings.suggestInSameFile && this.crossbowCache[cacheKey].file === this._currentFile)
-          return;
-
-        // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
-        // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
-        if (cacheKey === word) {
-          matchSet.add({ ...this.crossbowCache[cacheKey], rank: '🏆' });
-          return;
-        }
-
-        // If the word is on the ignore list, skip
-        if (CrossbowPlugin.settings.ignoredWordsCaseSensisitve.includes(word)) return;
-
-        // If the word is too short, skip
-        if (word.length <= 3) return;
-
-        // If the cache key is too short, skip
-        if (cacheKey.length <= CrossbowPlugin.settings.minimumSuggestionWordLength) return;
-
-        // If the word is not a substring of the key or the key is not a substring of the word, skip
-        if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false) return;
-
-        // If the word does not start with an uppercase letter, skip
-        if (
-          CrossbowPlugin.settings.ignoreOccurrencesWhichStartWithLowercaseLetter &&
-          cacheKey[0] === lowercaseCacheKey[0]
-        )
-          return;
-
-        // If the cache key does not start with an uppercase letter, skip
-        if (CrossbowPlugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter && word[0] === lowercaseWord[0])
-          return;
-
-        // If the word is a case-insensitive exact match, add as a very good suggestion
-        if (lowercaseCacheKey === lowercaseWord) {
-          matchSet.add({ ...this.crossbowCache[cacheKey], rank: '🥇' });
-          return;
-        }
-
-        // If the lengths differ too much, add as not-very-good suggestion
-        if ((1 / cacheKey.length) * word.length <= 0.2) {
-          matchSet.add({ ...this.crossbowCache[cacheKey], rank: '🥉' });
-          return;
-        }
-
-        // Else, add as a mediocre suggestion
-        matchSet.add({ ...this.crossbowCache[cacheKey], rank: '🥈' });
-      });
-
-      if (matchSet.size > 0) {
-        const matches = Array.from(matchSet).map((m) => new Match(m));
-        const occurrences = editorPositions.map((p) => new Occurrence(p, matches));
-        result.push(new Suggestion(word, occurrences));
-      }
-    });
-
-    // Sort the result
-    result.sort((a, b) => a.hash.localeCompare(b.hash)).forEach((suggestion) => suggestion.sortChildren());
-
-    return result;
-  }
-
-  // 'cache' can be passed in, if this is called from an event handler which already has the cache
-  // This will prevent the cache from being retrieved twice
-  private updateCrossbowCacheEntitiesOfFile(file: TFile, cache?: CachedMetadata): void {
-    if (file.extension !== 'md') return;
-
-    const metadata = cache ? cache : app.metadataCache.getFileCache(file);
-
-    if (file.basename.length >= CrossbowPlugin.settings.minimumSuggestionWordLength)
-      this.addOrUpdateCacheEntity({ file, text: file.basename, type: 'File' });
-
-    if (metadata) {
-      if (metadata.headings)
-        metadata.headings.forEach((headingCache) =>
-          this.addOrUpdateCacheEntity({
-            item: headingCache,
-            file,
-            text: headingCache.heading,
-            type: 'Heading',
-          })
-        );
-      if (metadata.tags)
-        metadata.tags.forEach((tagCache) =>
-          this.addOrUpdateCacheEntity({
-            item: tagCache,
-            file,
-            text: tagCache.tag,
-            type: 'Tag',
-          })
-        );
-    }
+    const wordLookup = this.tokenizationService.getWordLookupFromEditor(targetEditor);
+    const suggestions = this.suggestionsService.getSuggestionsFromWordlookup(wordLookup, this.currentFile);
+    this.viewController.addOrUpdateSuggestions(suggestions, targetEditor, fileHasChanged);
   }
 
   private setActiveFile(): void {
     const leaf = this.app.workspace.getMostRecentLeaf();
     if (leaf?.view instanceof MarkdownView) {
-      this._currentFile = leaf.view.file;
+      this.currentFile = leaf.view.file;
     } else console.warn('🏹: Unable to determine current editor.');
   }
 }

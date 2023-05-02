@@ -11,10 +11,9 @@
 // GNU General Public License for more details.
 
 import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
-import { Suggestion } from 'src/suggestion';
-import CrossbowPlugin from 'src/main';
+import { Suggestion } from 'src/model/suggestion';
 import { TreeItem } from './treeItem';
-import { CrossbowTreeItemBuilder } from './treeItemBuilder';
+import { CrossbowViewController } from 'src/controllers/viewController';
 
 export class CrossbowView extends ItemView {
   constructor(leaf: WorkspaceLeaf) {
@@ -49,13 +48,7 @@ export class CrossbowView extends ItemView {
     return this.contentEl.children.length > 0 ? (Array.from(this.contentEl.children) as TreeItem<Suggestion>[]) : [];
   }
 
-  public updateSuggestions(suggestions: Suggestion[], targetEditor: Editor, fileHasChanged: boolean): void {
-    CrossbowPlugin.debugLog(`${fileHasChanged ? 'Clearing & adding' : 'Updating'} suggestions`);
-
-    if (fileHasChanged) {
-      this.clear();
-    }
-
+  public addOrUpdateSuggestions(suggestions: Suggestion[], targetEditor: Editor): void {
     const currentSuggestionTreeItems = this.getCurrentSuggestions();
 
     suggestions.forEach((suggestion) => {
@@ -63,11 +56,7 @@ export class CrossbowView extends ItemView {
       const index = currentSuggestionTreeItems.findIndex((item) => item.hash === suggestion.hash);
       const existingSuggestion = index !== -1 ? currentSuggestionTreeItems.splice(index, 1)[0] : undefined;
 
-      const suggestionTreeItem = CrossbowTreeItemBuilder.createSuggestionTreeItem(
-        suggestion,
-        this.app.fileManager,
-        targetEditor
-      );
+      const suggestionTreeItem = CrossbowViewController.createSuggestionTreeItem(suggestion, targetEditor);
 
       if (existingSuggestion) {
         const expandedOccurrencesHashes = existingSuggestion

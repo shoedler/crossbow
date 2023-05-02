@@ -12,32 +12,11 @@
 
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import CrossbowPlugin from './main';
-
-export interface CrossbowPluginSettings {
-  ignoredWordsCaseSensisitve: string[];
-  suggestInSameFile: boolean;
-  ignoreSuggestionsWhichStartWithLowercaseLetter: boolean;
-  ignoreOccurrencesWhichStartWithLowercaseLetter: boolean;
-  minimumSuggestionWordLength: number;
-
-  useLogging: boolean;
-}
-
-export const DEFAULT_SETTINGS: CrossbowPluginSettings = {
-  ignoredWordsCaseSensisitve: ['image', 'the', 'always', 'some'],
-  suggestInSameFile: false,
-  ignoreSuggestionsWhichStartWithLowercaseLetter: true,
-  ignoreOccurrencesWhichStartWithLowercaseLetter: false,
-  minimumSuggestionWordLength: 3,
-  useLogging: false,
-};
+import { CrossbowPluginSettings, CrossbowSettingsService } from './services/settingsService';
 
 export class CrossbowSettingTab extends PluginSettingTab {
-  plugin: CrossbowPlugin;
-
-  constructor(app: App, plugin: CrossbowPlugin) {
+  constructor(app: App, plugin: CrossbowPlugin, private settingsService: CrossbowSettingsService) {
     super(app, plugin);
-    this.plugin = plugin;
   }
 
   display(): void {
@@ -52,7 +31,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
         'A case-sensitive, comma separated list of words to ignore when searching for items (Headers, tags). (Whitepaces will be trimmed)'
       )
       .addTextArea((textArea) => {
-        textArea.setValue(CrossbowPlugin.settings.ignoredWordsCaseSensisitve?.join(', ') ?? '').onChange(
+        textArea.setValue(this.settingsService.getSettings().ignoredWordsCaseSensisitve?.join(', ') ?? '').onChange(
           async (value) =>
             await this.updateSettingValue(
               'ignoredWordsCaseSensisitve',
@@ -68,7 +47,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
       .setDesc('If checked, suggestions which start with a lowercase letter will be ignored')
       .addToggle((toggle) =>
         toggle
-          .setValue(CrossbowPlugin.settings.ignoreSuggestionsWhichStartWithLowercaseLetter)
+          .setValue(this.settingsService.getSettings().ignoreSuggestionsWhichStartWithLowercaseLetter)
           .onChange(
             async (value) => await this.updateSettingValue('ignoreSuggestionsWhichStartWithLowercaseLetter', value)
           )
@@ -81,7 +60,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
       )
       .addToggle((toggle) =>
         toggle
-          .setValue(CrossbowPlugin.settings.ignoreOccurrencesWhichStartWithLowercaseLetter)
+          .setValue(this.settingsService.getSettings().ignoreOccurrencesWhichStartWithLowercaseLetter)
           .onChange(
             async (value) => await this.updateSettingValue('ignoreOccurrencesWhichStartWithLowercaseLetter', value)
           )
@@ -92,7 +71,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
       .setDesc('If checked, suggestions to items (Headers, Tags) in the same file be created')
       .addToggle((toggle) =>
         toggle
-          .setValue(CrossbowPlugin.settings.suggestInSameFile)
+          .setValue(this.settingsService.getSettings().suggestInSameFile)
           .onChange(async (value) => await this.updateSettingValue('suggestInSameFile', value))
       );
 
@@ -102,7 +81,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
       .addSlider((slider) => {
         slider
           .setLimits(1, 20, 1)
-          .setValue(CrossbowPlugin.settings.minimumSuggestionWordLength)
+          .setValue(this.settingsService.getSettings().minimumSuggestionWordLength)
           .onChange(async (value) => await this.updateSettingValue('minimumSuggestionWordLength', value))
           .setDynamicTooltip();
       });
@@ -112,7 +91,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
       .setDesc('If checked, debug logs will be printed to the console')
       .addToggle((toggle) =>
         toggle
-          .setValue(CrossbowPlugin.settings.useLogging)
+          .setValue(this.settingsService.getSettings().useLogging)
           .onChange(async (value) => await this.updateSettingValue('useLogging', value))
       );
   }
@@ -121,8 +100,8 @@ export class CrossbowSettingTab extends PluginSettingTab {
     key: K,
     value: CrossbowPluginSettings[K]
   ) => {
-    CrossbowPlugin.settings[key] = value;
-    await this.plugin.saveSettings();
-    this.plugin.runWithCacheUpdate(true);
+    const settings = this.settingsService.getSettings()
+    settings[key] = value;
+    await this.settingsService.saveSettings(settings);
   };
 }

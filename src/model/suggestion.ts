@@ -11,8 +11,8 @@
 // GNU General Public License for more details.
 
 import { EditorPosition } from 'obsidian';
-import { CacheMatch } from './main';
-import { ITreeVisualizable } from './view/treeItem';
+import { ITreeVisualizable } from '../view/treeItem';
+import { CacheMatch } from 'src/services/indexingService';
 
 export class Suggestion implements ITreeVisualizable {
   public constructor(public readonly word: string, public readonly occurrences: Occurrence[]) {}
