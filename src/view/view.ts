@@ -18,7 +18,7 @@ import { CrossbowViewController } from 'src/controllers/viewController';
 export class CrossbowView extends ItemView {
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
-    this.contentEl.createSpan({ text: 'Open a note to run crossbow', cls: 'crossbow-view-empty' });
+    this.contentEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
   }
 
   public static viewType = 'crossbow-toolbar';

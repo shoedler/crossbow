@@ -35,7 +35,7 @@
   color: var(--icon-color-focused);
 }
 
-.crossbow-view-empty {
+.cb-view-empty {
   color: var(--text-faint);
   display: table;
   margin: 1rem auto;

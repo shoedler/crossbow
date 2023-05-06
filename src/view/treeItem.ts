@@ -54,24 +54,24 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
     super();
     this.value = value;
 
-    this.addClass('cb-tree-item');
+    this.addClass('tree-item');
     this.mainWrapper = this.createDiv({
-      cls: 'cb-tree-item-self is-clickable',
+      cls: 'tree-item-self is-clickable',
     });
 
     this.inner = this.mainWrapper.createDiv({
-      cls: 'cb-tree-item-inner cb-tree-item-inner-extensions',
+      cls: 'tree-item-inner cb-tree-item-inner-extensions',
       text: this.text,
     });
     this.flairWrapper = this.mainWrapper.createDiv({
-      cls: 'cb-tree-item-flair-outer',
+      cls: 'tree-item-flair-outer',
     });
 
     this.suffix = this.inner.createEl('span', {
       cls: 'cb-tree-item-inner-suffix',
     });
     this.flair = this.flairWrapper.createEl('span', {
-      cls: 'cb-tree-item-flair',
+      cls: 'tree-item-flair',
     });
   }
 
@@ -121,11 +121,11 @@ export class TreeItem<TData extends ITreeVisualizable> extends TreeItemLeaf<TDat
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
 
-    this.childrenWrapper = this.createDiv({ cls: 'cb-tree-item-children' });
+    this.childrenWrapper = this.createDiv({ cls: 'tree-item-children' });
     this.childrenWrapper.style.display = 'none';
 
     this.iconWrapper = this.createDiv({
-      cls: ['cb-tree-item-icon', 'collapse-icon'],
+      cls: ['tree-item-icon', 'collapse-icon'],
     });
     this.iconWrapper.appendChild(getIcon('right-triangle')!);
 
