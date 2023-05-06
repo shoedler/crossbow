@@ -54,7 +54,6 @@ export class Match implements ITreeVisualizable {
   public get hash(): string {
     return `${this.cacheMatch.text}|${this.cacheMatch.file.path}`;
   }
-
   public get text(): string {
     return `${this.cacheMatch.rank} ${this.cacheMatch.text}`;
   }

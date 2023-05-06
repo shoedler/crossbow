@@ -13,7 +13,7 @@
 import { Editor, EditorPosition } from 'obsidian';
 import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
 import { CacheMatch } from 'src/services/indexingService';
-import { TreeItem, TreeItemLeaf } from 'src/view/treeItem';
+import { TreeItem, TreeItemButtonIcon, TreeItemLeaf } from 'src/view/treeItem';
 import { CrossbowView } from 'src/view/view';
 
 export class CrossbowViewController {
@@ -94,7 +94,7 @@ export class CrossbowViewController {
       };
 
       // ...Can be invoked via flair button...
-      occurrenceTreeItem.addButton('Scroll into View', 'lucide-scroll', (ev: MouseEvent) => {
+      occurrenceTreeItem.addButton('Scroll into View', TreeItemButtonIcon.Scroll, (ev: MouseEvent) => {
         scrollIntoView();
         ev.preventDefault();
         ev.stopPropagation();
@@ -128,13 +128,13 @@ export class CrossbowViewController {
         : app.fileManager.generateMarkdownLink(match.cacheMatch.file, match.cacheMatch.text, undefined, word);
 
       // 'Use' button inserts backlink & disables the occurrence
-      matchTreeItem.addButton('Use', 'lucide-inspect', () => {
+      matchTreeItem.addButton('Use', TreeItemButtonIcon.Inspect, () => {
         occurrenceTreeItem.setDisable();
         targetEditor.replaceRange(link, occurrenceTreeItem.value.editorPosition, occurrenceEnd);
       });
 
       // Go to source action
-      matchTreeItem.addButton('Go To Source', 'lucide-search', () => {
+      matchTreeItem.addButton('Go To Source', TreeItemButtonIcon.Search, () => {
         console.warn("🏹: 'Go To Source' is not yet implemented");
       });
 

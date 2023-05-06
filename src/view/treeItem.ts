@@ -24,6 +24,12 @@ export const registerTreeItemElements = () => {
   TreeItemLeaf.register();
 };
 
+export enum TreeItemButtonIcon {
+  Scroll = 'lucide-scroll',
+  Inspect = 'lucide-inspect',
+  Search = 'lucide-search',
+}
+
 export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
   private readonly inner: HTMLDivElement;
   private readonly suffix: HTMLSpanElement;
@@ -86,7 +92,7 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
     this.suffix.innerText = text;
   }
 
-  public addButton(label: string, iconName: string, onclick: (this: HTMLDivElement, ev: MouseEvent) => any): void {
+  public addButton(label: string, iconName: TreeItemButtonIcon, onclick: (this: HTMLDivElement, ev: MouseEvent) => any): void {
     const button = new ButtonComponent(this.mainWrapper);
 
     button.setTooltip(label);

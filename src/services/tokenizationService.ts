@@ -22,9 +22,8 @@ export class CrossbowTokenizationService {
     if (!targetEditor) return {};
 
     const plainText = targetEditor.getValue();
-
-    // Split the plain text into word-objects, which contain the word and its position in the editor
     const words: { word: string; pos: EditorPosition }[] = [];
+
     for (let i = 0; i < plainText.length; i++) {
       if (plainText[i].match(/\s/)) continue;
       else {
