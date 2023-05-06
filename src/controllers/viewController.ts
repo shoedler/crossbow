@@ -10,9 +10,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { ButtonComponent, Editor, EditorPosition } from 'obsidian';
+import { ButtonComponent, Editor, EditorPosition, MarkdownView } from 'obsidian';
 import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
 import { CacheMatch } from 'src/services/indexingService';
+import { CrossbowLoggingService } from 'src/services/loggingService';
 import { CrossbowSettingsService } from 'src/services/settingsService';
 import { TreeItem, TreeItemButtonIcon, TreeItemLeaf } from 'src/view/treeItem';
 import { CrossbowView } from 'src/view/view';
@@ -153,7 +154,19 @@ export class CrossbowViewController {
 
       // Go to source action
       matchTreeItem.addButton('Go To Source', TreeItemButtonIcon.Search, () => {
-        console.warn("🏹: 'Go To Source' is not yet implemented");
+        const leaf = app.workspace.getLeaf(true);
+        app.workspace.setActiveLeaf(leaf);
+        leaf.openFile(match.cacheMatch.file).then(() => {
+          if (leaf.view instanceof MarkdownView) {
+            if (match.cacheMatch.item?.position) {
+              const { line, col } = match.cacheMatch.item.position.start
+              leaf.view.editor.setCursor(line, col);
+            }
+          }
+          else {
+            CrossbowLoggingService.forceLog('warn', 'Could not go to source, not a markdown file');
+          }
+        });
       });
 
       matchTreeItem.addTextSuffix(match.cacheMatch.type);
