@@ -16,9 +16,16 @@ import { TreeItem } from './treeItem';
 import { CrossbowViewController } from 'src/controllers/viewController';
 
 export class CrossbowView extends ItemView {
-  constructor(leaf: WorkspaceLeaf) {
+  private readonly treeEl: HTMLElement;
+  private readonly controlsEl: HTMLElement;
+
+  constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => any) {
     super(leaf);
-    this.contentEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
+    this.controlsEl = this.contentEl.createDiv({ cls: 'cb-view-controls' });
+    this.treeEl = this.contentEl.createDiv();
+
+    CrossbowViewController.createManualRefreshButton(this.controlsEl, this.onManualRefreshButtonClick);
+    this.treeEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
   }
 
   public static viewType = 'crossbow-toolbar';
@@ -41,11 +48,15 @@ export class CrossbowView extends ItemView {
   }
 
   public clear(): void {
-    this.contentEl.empty();
+    this.treeEl.empty();
   }
 
-  private getCurrentSuggestions(): TreeItem<Suggestion>[] {
-    return this.contentEl.children.length > 0 ? (Array.from(this.contentEl.children) as TreeItem<Suggestion>[]) : [];
+  public update(suggestions: Suggestion[], targetEditor: Editor, showManualRefreshButton: boolean): void {
+    showManualRefreshButton ?
+      this.getManualRefreshButton().show() :
+      this.getManualRefreshButton().hide();
+
+    this.addOrUpdateSuggestions(suggestions, targetEditor);
   }
 
   public addOrUpdateSuggestions(suggestions: Suggestion[], targetEditor: Editor): void {
@@ -72,21 +83,29 @@ export class CrossbowView extends ItemView {
         });
 
         // Insert / append the new suggestion, depending on whether it already existed
-        this.contentEl.insertAfter(suggestionTreeItem, existingSuggestion);
+        this.treeEl.insertAfter(suggestionTreeItem, existingSuggestion);
         existingSuggestion.isCollapsed() ? suggestionTreeItem.collapse() : suggestionTreeItem.expand();
         existingSuggestion.remove();
       } else {
         // Insert the new suggestion at the correct position. They are sorted by localeCompare of their 'hash' property
         const index = currentSuggestionTreeItems.findIndex((item) => suggestion.hash.localeCompare(item.hash) < 0);
         if (index === -1) {
-          this.contentEl.appendChild(suggestionTreeItem);
+          this.treeEl.appendChild(suggestionTreeItem);
         } else {
-          this.contentEl.insertBefore(suggestionTreeItem, currentSuggestionTreeItems[index]);
+          this.treeEl.insertBefore(suggestionTreeItem, currentSuggestionTreeItems[index]);
         }
       }
     });
 
     // Now, we're left with the existing suggestions that we need to remove
     currentSuggestionTreeItems.forEach((item) => item.remove());
+  }
+
+  private getManualRefreshButton(): HTMLElement {
+    return this.controlsEl.querySelector("#" + CrossbowViewController.MANUAL_REFRESH_BUTTON_ID) as HTMLElement;
+  }
+
+  private getCurrentSuggestions(): TreeItem<Suggestion>[] {
+    return this.treeEl.children.length > 0 ? (Array.from(this.treeEl.children) as TreeItem<Suggestion>[]) : [];
   }
 }

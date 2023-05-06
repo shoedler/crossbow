@@ -43,7 +43,7 @@ export default class CrossbowPlugin extends Plugin {
     this.tokenizationService = new CrossbowTokenizationService();
     this.suggestionsService = new CrossbowSuggestionsService(this.settingsService, this.indexingService);
 
-    this.viewController = new CrossbowViewController();
+    this.viewController = new CrossbowViewController(this.settingsService);
   }
 
   public async onload(): Promise<void> {
@@ -54,7 +54,7 @@ export default class CrossbowPlugin extends Plugin {
     // Register view elements
     registerCrossbowIcons();
     registerTreeItemElements();
-    this.registerView(CrossbowView.viewType, (leaf) => new CrossbowView(leaf));
+    this.registerView(CrossbowView.viewType, (leaf) => new CrossbowView(leaf, this.onManualRefreshButtonClick));
 
     // Ribbon icon to access the crossbow pane
     this.addRibbonIcon('crossbow', 'Crossbow', async (ev: MouseEvent) => {
@@ -84,6 +84,7 @@ export default class CrossbowPlugin extends Plugin {
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata): void => {
     if (this.metadataChangedTimeout) clearTimeout(this.metadataChangedTimeout);
 
+    if (!this.settingsService.getSettings().useAutoRefresh) return;
     if (!this.viewController.doesCrossbowViewExist()) return;
 
     this.metadataChangedTimeout = setTimeout(() => {
@@ -91,7 +92,7 @@ export default class CrossbowPlugin extends Plugin {
       this.indexingService.indexFile(file, cache);
       this.runWithoutCacheUpdate(false);
       this.loggingService.debugLog(`Metadata cache updated for ${file.basename}.`);
-    }, 2600); // This value is arbitrary, but it seems to work well. 'onMetadataChange' get's triggerd every ~2 to ~2.5 seconds.
+    }, this.settingsService.getSettings().autoRefreshDelayMs); // This value is arbitrary (Min. 2600ms). 'onMetadataChange' get's triggerd every ~2 to ~2.5 seconds.
   };
 
   private onFileOpen = (): void => {
@@ -111,9 +112,15 @@ export default class CrossbowPlugin extends Plugin {
   };
 
   private onSettingsChanged = async (settings: CrossbowPluginSettings) => {
+    this.loggingService.debugLog('Settings saved.');
     await this.saveData(settings);
     this.runWithCacheUpdate(true);
   };
+
+  private onManualRefreshButtonClick = (): void => {
+    this.loggingService.debugLog('Manually triggered update.');
+    this.runWithoutCacheUpdate(true);
+  }
 
   public runWithCacheUpdate(fileHasChanged: boolean): void {
     this.indexingService.indexVault(this.app.vault);

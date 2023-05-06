@@ -10,13 +10,18 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { Editor, EditorPosition } from 'obsidian';
+import { ButtonComponent, Editor, EditorPosition } from 'obsidian';
 import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
 import { CacheMatch } from 'src/services/indexingService';
+import { CrossbowSettingsService } from 'src/services/settingsService';
 import { TreeItem, TreeItemButtonIcon, TreeItemLeaf } from 'src/view/treeItem';
 import { CrossbowView } from 'src/view/view';
 
 export class CrossbowViewController {
+  public static MANUAL_REFRESH_BUTTON_ID = "cb-refresh-button";
+
+  constructor(private readonly settingsService: CrossbowSettingsService) {}
+
   public async revealOrCreateView(): Promise<void> {
     const existing = app.workspace.getLeavesOfType(CrossbowView.viewType);
 
@@ -51,7 +56,20 @@ export class CrossbowViewController {
     if (!view) return;
     if (fileHasChanged) view.clear();
 
-    view.addOrUpdateSuggestions(suggestions, targetEditor);
+    const showManualRefreshButton = !this.settingsService.getSettings().useAutoRefresh;
+    view.update(suggestions, targetEditor, showManualRefreshButton);
+  }
+
+  public static createManualRefreshButton(parentEl: HTMLElement, onClick: (ev: MouseEvent) => any): ButtonComponent {
+    const button = new ButtonComponent(parentEl);
+
+    button.buttonEl.id = CrossbowViewController.MANUAL_REFRESH_BUTTON_ID;
+    button.setTooltip("Refresh suggestions");
+    button.setIcon("lucide-rotate-cw");
+    button.setClass("cb-tree-item-button")
+    button.onClick(onClick);
+
+    return button;
   }
 
   public static createSuggestionTreeItem(suggestion: Suggestion, targetEditor: Editor): TreeItem<Suggestion> {
