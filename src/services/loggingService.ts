@@ -15,7 +15,17 @@ import { CrossbowSettingsService } from './settingsService';
 export class CrossbowLoggingService {
   public constructor(private readonly settingsService: CrossbowSettingsService) {}
 
+  private static LOGGER_PREFIX = '🏹: ';
+
   public debugLog(message: string): void {
-    this.settingsService.getSettings().useLogging && console.log(`🏹: ${message}`);
+    this.settingsService.getSettings().useLogging && console.log(CrossbowLoggingService.LOGGER_PREFIX + message);
+  }
+
+  public debugWarn(message: string): void {
+    this.settingsService.getSettings().useLogging && console.warn(CrossbowLoggingService.LOGGER_PREFIX + message);
+  }
+
+  public static forceLog(type: 'warn' | 'log', message: string): void {
+    console[type](CrossbowLoggingService.LOGGER_PREFIX + message);
   }
 }

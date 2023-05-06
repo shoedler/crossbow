@@ -3,13 +3,14 @@
 ## Roadmap
 
 - [x] General UX Improvement
-- [ ] Add "Goto Source" action on suggestions
+- [x] Add "Goto Source" action on suggestions
 - [x] Fix occurrences hint not being updated when new occurrences are found
 
 ## Refactors
 
 - [x] Refactor handling / updating of `TreeItem`s. Use a reactive approach instead of manually updating the tree.
-- [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax)
+- [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax) (Maybe a code mirror plugin?)
+- [ ] Minimally stem words before matching them to cache items
 
 ## Releasing new releases
 
