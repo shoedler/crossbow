@@ -54,24 +54,24 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
     super();
     this.value = value;
 
-    this.addClass('tree-item');
+    this.addClass('cb-tree-item');
     this.mainWrapper = this.createDiv({
-      cls: 'tree-item-self is-clickable',
+      cls: 'cb-tree-item-self is-clickable',
     });
 
     this.inner = this.mainWrapper.createDiv({
-      cls: 'tree-item-inner tree-item-inner-extensions',
+      cls: 'cb-tree-item-inner cb-tree-item-inner-extensions',
       text: this.text,
     });
     this.flairWrapper = this.mainWrapper.createDiv({
-      cls: 'tree-item-flair-outer',
+      cls: 'cb-tree-item-flair-outer',
     });
 
     this.suffix = this.inner.createEl('span', {
-      cls: 'tree-item-inner-suffix',
+      cls: 'cb-tree-item-inner-suffix',
     });
     this.flair = this.flairWrapper.createEl('span', {
-      cls: 'tree-item-flair',
+      cls: 'cb-tree-item-flair',
     });
   }
 
@@ -97,7 +97,7 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
 
     button.setTooltip(label);
     button.setIcon(iconName);
-    button.setClass('tree-item-button');
+    button.setClass('cb-tree-item-button');
     button.onClick(onclick);
 
     this.buttons.push(button);
@@ -121,11 +121,11 @@ export class TreeItem<TData extends ITreeVisualizable> extends TreeItemLeaf<TDat
     this.addClass('is-collapsed');
     this.mainWrapper.addClass('mod-collapsible');
 
-    this.childrenWrapper = this.createDiv({ cls: 'tree-item-children' });
+    this.childrenWrapper = this.createDiv({ cls: 'cb-tree-item-children' });
     this.childrenWrapper.style.display = 'none';
 
     this.iconWrapper = this.createDiv({
-      cls: ['tree-item-icon', 'collapse-icon'],
+      cls: ['cb-tree-item-icon', 'collapse-icon'],
     });
     this.iconWrapper.appendChild(getIcon('right-triangle')!);
 

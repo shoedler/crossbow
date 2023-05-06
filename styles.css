@@ -1,15 +1,15 @@
-.tree-item-inner-extensions {
+.cb-tree-item-inner-extensions {
   word-break: break-word;
 }
 
-.tree-item-inner-suffix {
+.cb-tree-item-inner-suffix {
   /* font-style: italic; */
   padding-left: 0.2rem;
   color: var(--text-faint);
   opacity: var(--icon-opacity);
 }
 
-.tree-item-button {
+.cb-tree-item-button {
   box-shadow: none !important;              /* Obsidian Button class overrides */
   background-color: transparent !important; /* Obsidian Button class overrides */
   padding: 0 !important;                    /* Obsidian Button class overrides */
@@ -21,16 +21,16 @@
   opacity: var(--icon-opacity);
 }
 
-.tree-item-button > svg {
+.cb-tree-item-button > svg {
   width: 12px !important;                   /* Obsidian Button class overrides */
   height: 12px !important;                  /* Obsidian Button class overrides */
   stroke-width: 2.5px !important;               /* Obsidian Button class overrides */
 }
-.tree-item-button:disabled {
+.cb-tree-item-button:disabled {
   opacity: calc(var(--icon-opacity) * 0.5);
 }
 
-.tree-item-button:not(:disabled):hover {
+.cb-tree-item-button:not(:disabled):hover {
   opacity: var(--icon-opacity-active);
   color: var(--icon-color-focused);
 }
