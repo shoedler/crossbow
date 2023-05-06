@@ -35,9 +35,16 @@
   color: var(--icon-color-focused);
 }
 
-.crossbow-view-empty {
+.cb-view-empty {
   color: var(--text-faint);
   display: table;
   margin: 1rem auto;
   font-style: italic;
+}
+
+.cb-view-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }

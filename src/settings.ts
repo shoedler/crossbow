@@ -25,6 +25,15 @@ export class CrossbowSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.createEl('h2', { text: 'Crossbow Settings 🏹' });
 
+    this.addIndexingSettings(containerEl);
+    this.addSuggestionsSettings(containerEl);
+    this.addAutoRefreshSettings(containerEl);
+    this.addLoggingSettings(containerEl);
+  }
+
+  private addIndexingSettings(containerEl: HTMLElement) {
+    containerEl.createEl('h3', { text: 'Indexing' });
+
     new Setting(containerEl)
       .setName('Ignored Words')
       .setDesc(
@@ -41,17 +50,10 @@ export class CrossbowSettingTab extends PluginSettingTab {
 
         textArea.inputEl.setAttr('style', 'height: 10vh; width: 25vw;');
       });
+  }
 
-    new Setting(containerEl)
-      .setName('Ignore suggestions which start with a lowercase letter')
-      .setDesc('If checked, suggestions which start with a lowercase letter will be ignored')
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.settingsService.getSettings().ignoreSuggestionsWhichStartWithLowercaseLetter)
-          .onChange(
-            async (value) => await this.updateSettingValue('ignoreSuggestionsWhichStartWithLowercaseLetter', value)
-          )
-      );
+  private addSuggestionsSettings(containerEl: HTMLElement) {
+    containerEl.createEl('h3', { text: 'Suggestions' });
 
     new Setting(containerEl)
       .setName('Ignore occurrences which start with a lowercase letter')
@@ -67,6 +69,17 @@ export class CrossbowSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('Ignore suggestions which start with a lowercase letter')
+      .setDesc('If checked, suggestions which start with a lowercase letter will be ignored')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.settingsService.getSettings().ignoreSuggestionsWhichStartWithLowercaseLetter)
+          .onChange(
+            async (value) => await this.updateSettingValue('ignoreSuggestionsWhichStartWithLowercaseLetter', value)
+          )
+      );
+
+    new Setting(containerEl)
       .setName('Make suggestions to items in the same file')
       .setDesc('If checked, suggestions to items (Headers, Tags) in the same file be created')
       .addToggle((toggle) =>
@@ -77,6 +90,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Minimum word length of suggestions')
+      .setDisabled(!this.settingsService.getSettings().useAutoRefresh)
       .setDesc('Defines the min. length an item (Header, Tag) must have for it to be considered a suggestion')
       .addSlider((slider) => {
         slider
@@ -85,6 +99,10 @@ export class CrossbowSettingTab extends PluginSettingTab {
           .onChange(async (value) => await this.updateSettingValue('minimumSuggestionWordLength', value))
           .setDynamicTooltip();
       });
+  }
+
+  private addLoggingSettings(containerEl: HTMLElement) {
+    containerEl.createEl('h3', { text: 'Debug' });
 
     new Setting(containerEl)
       .setName('Enable logging')
@@ -94,6 +112,45 @@ export class CrossbowSettingTab extends PluginSettingTab {
           .setValue(this.settingsService.getSettings().useLogging)
           .onChange(async (value) => await this.updateSettingValue('useLogging', value))
       );
+  }
+
+  private addAutoRefreshSettings(containerEl: HTMLElement) {
+    containerEl.createEl('h3', { text: 'Auto refresh' });
+
+    const autoRefreshSetting = new Setting(containerEl)
+      .setName('Enable auto refresh')
+      .setDesc('If checked, crossbow will automatically refresh if the current note has been edited');
+
+    const autoRefreshDelaySetting = new Setting(containerEl)
+      .setName('Auto refresh delay')
+      .setDesc('A delay in ms after which crossbow will refresh if the current note has been edited');
+
+    let autoRefreshSettingUpdateTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+
+    autoRefreshSetting.addToggle((toggle) =>
+      toggle
+        .setValue(this.settingsService.getSettings().useAutoRefresh)
+        .onChange(async (value) => {
+          autoRefreshDelaySetting.setDisabled(!value);
+          await this.updateSettingValue('useAutoRefresh', value);
+        })
+    );
+
+    autoRefreshDelaySetting.addSlider((slider) => {
+      slider
+        .setLimits(2600, 20000, 100)
+        .setValue(this.settingsService.getSettings().autoRefreshDelayMs)
+        .onChange(async (value) => {
+          if (autoRefreshSettingUpdateTimeout) {
+            clearTimeout(autoRefreshSettingUpdateTimeout);
+          }
+
+          autoRefreshSettingUpdateTimeout = setTimeout(async () => {
+            await this.updateSettingValue('autoRefreshDelayMs', value);
+          }, 1000);
+        })
+        .setDynamicTooltip();
+    })
   }
 
   private updateSettingValue = async <K extends keyof CrossbowPluginSettings>(

@@ -17,6 +17,8 @@ export interface CrossbowPluginSettings {
   ignoreOccurrencesWhichStartWithLowercaseLetter: boolean;
   minimumSuggestionWordLength: number;
   useLogging: boolean;
+  useAutoRefresh: boolean;
+  autoRefreshDelayMs: number;
 }
 
 export const DEFAULT_SETTINGS: CrossbowPluginSettings = {
@@ -26,6 +28,8 @@ export const DEFAULT_SETTINGS: CrossbowPluginSettings = {
   ignoreOccurrencesWhichStartWithLowercaseLetter: false,
   minimumSuggestionWordLength: 3,
   useLogging: false,
+  useAutoRefresh: true,
+  autoRefreshDelayMs: 2600,
 };
 
 export class CrossbowSettingsService {
