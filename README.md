@@ -17,7 +17,7 @@ Clicking on one of the occurences will scroll to it and show you a list of match
 
 You can apply a match by clicking the appropriate icon next to the match:
 
-![image](https://user-images.githubusercontent.com/38029550/229280015-6dfd5747-c445-420c-b75d-9637690ca089.png)
+![image](https://user-images.githubusercontent.com/38029550/236627426-d4d44d7d-f8e4-4d0d-b291-9ec6aa281ee6.png)
 
 which will insert the following link:
 
