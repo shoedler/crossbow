@@ -22,7 +22,7 @@ export class CrossbowView extends ItemView {
   constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => any) {
     super(leaf);
     this.controlsEl = this.contentEl.createDiv({ cls: 'cb-view-controls' });
-    this.treeEl = this.contentEl.createDiv();
+    this.treeEl = this.contentEl.createDiv({ cls: 'cb-view-tree'});
 
     CrossbowViewController.createManualRefreshButton(this.controlsEl, this.onManualRefreshButtonClick);
     this.treeEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
