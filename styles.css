@@ -48,3 +48,7 @@
   align-items: center;
   margin-bottom: 0.5rem;
 }
+
+.cb-view-tree {
+  padding-bottom: 1rem; /* To make sure all tree items are viewable, because of the statusbar */
+}
