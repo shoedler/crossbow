@@ -56,17 +56,59 @@ As of 1.1.1 the process of filtering looks like this:
 Initially, it gathers all the **word**s in the active editor (current note) and all the cache items (Identified by their **cache key**) in the vault.
 Then, it follows a simple process for each **word** and **cache key** to create a suggestion:
 
-1. If the **cache key** stems from the active editor (current note), skip. Configurable, see setting _Make suggestions to items in the same file_.
-2. If we have an exact match (case sensitive) between **word** and **cache key**, add it as a very good suggestion (ranked as "🏆"). End of process.
-3. If the **word** is on the ignore list, skip. Configurable, see setting _Ignored words_.
-4. If the **word** is too short (Currently meaning less than 3 chars), skip.
-5. If the **cache key** is too short, skip. Configurable, see setting _Minimum word length of suggestions_.
-6. If the **word** is not a substring of the **cache key** or vice versa, skip
-7. If the **word** does not start with an uppercase letter, skip. Configurable, see setting _Ignore suggestions which start with a lowercase letter_.
-8. If the **cache key** does not start with an uppercase letter, skip. Configurable, see setting _Ignore suggestions which start with a lowercase letter_.
-9. If we have an exact match (case insensitive) between **word** and **cache key**, add it as a good suggestion (ranked as "🥇"). End of process.
-10. If we have a similarity of less than 20% length-wise between **word** and **cache key**, add it as a 'not-very-good' suggestion (ranked as "🥉"). End of process.
-11. Else, add it as a mediocre suggestion (ranked as "🥈"). End of process.
+```mermaid
+graph TD
+    START((Start))
+    Q_ACT_EDITOR["1. <b>Cache key</b> stems from active editor? <br>Configurable, see setting <i>Make suggestions to items in the same file</i>"]
+    Q_EXCT_MATCH["2. Exact match (case sensitive) between <b>word</b> and <b>cache key</b>?"]
+    Q_WORD_IGNOR["3. <b>Word</b> is on ignore list? (case sensitive) <br>Configurable, see setting <i>Ignored words</i>"]
+    Q_WORD_SHORT["4. <b>Word</b> is too short? (Currently fixed to 3 chars)"]
+    Q_CKEY_SHORT["5. <b>Cache key</b> is too short? <br>Configurable, see setting <i>Minimum word length of suggestions</i>"]
+    Q_IS_SUBSTRG["6. <b>Word</b> is a substring of <b>cache key</b> or vice versa?"]
+    Q_WORD_UCASE["7. <b>Word</b> starts with an uppercase letter? <br>Configurable, see setting <i>Ignore occurrences which start with a lowercase letter</i>"]
+    Q_CKEY_UCASE["8. <b>Cache key</b> starts with an uppercase letter? <br>Configurable, see setting <i>Ignore suggestions which start with a lowercase letter</i>"]
+    Q_MATCH_INSV["9. Exact match (case insensitive) between <b>word</b> and <b>cache key</b>?"]
+    Q_LEN_SIMILR["10. Similarity of less than 20% length-wise between <b>word</b> and <b>cache key</b>?"]
+
+    STOP((STOP))
+
+    SUCCESS_1["Add as very good suggestion (🏆)"]
+    SUCCESS_2["Add as good suggestion (🥇)"]
+    SUCCESS_3["Add as mediocre suggestion (🥈)"]
+    SUCCESS_4["Add as 'not-very-good' suggestion (🥉)"]
+
+
+    START --> Q_ACT_EDITOR
+
+    Q_ACT_EDITOR -- Yes --> STOP
+    Q_ACT_EDITOR -- No --> Q_EXCT_MATCH
+
+    Q_EXCT_MATCH -- Yes --> SUCCESS_1 --> STOP
+    Q_EXCT_MATCH -- No --> Q_WORD_IGNOR
+
+    Q_WORD_IGNOR -- Yes --> STOP
+    Q_WORD_IGNOR -- No --> Q_WORD_SHORT
+
+    Q_WORD_SHORT -- Yes --> STOP
+    Q_WORD_SHORT -- No --> Q_CKEY_SHORT
+
+    Q_CKEY_SHORT -- Yes --> STOP
+    Q_CKEY_SHORT -- No --> Q_IS_SUBSTRG
+
+    Q_IS_SUBSTRG -- Yes --> STOP
+    Q_IS_SUBSTRG -- No --> Q_WORD_UCASE
+
+    Q_WORD_UCASE -- Yes --> STOP
+    Q_WORD_UCASE -- No --> Q_CKEY_UCASE
+
+    Q_CKEY_UCASE -- Yes --> STOP
+    Q_CKEY_UCASE -- No --> Q_MATCH_INSV
+
+    Q_MATCH_INSV -- Yes --> SUCCESS_2 --> STOP
+    Q_MATCH_INSV -- No --> Q_LEN_SIMILR
+    Q_LEN_SIMILR -- Yes --> SUCCESS_4 --> STOP
+    Q_LEN_SIMILR -- No --> SUCCESS_3 --> STOP
+```
 
 Keep in mind that these steps are processed in order. For example, take a look at the length filter in step 10. At this point, the **word** and **cache key** are already a substring of each other (step 6), meaning that this step adds things like "donut" and "donut hole punching machine manual". Not things that are in general vastly different to each other, which would create a lot of false positives.
 
