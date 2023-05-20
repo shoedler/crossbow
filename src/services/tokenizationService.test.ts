@@ -15,8 +15,10 @@
 import { Editor } from 'obsidian';
 import { CrossbowTokenizationService, WordLookup } from './tokenizationService';
 
+const proto = CrossbowTokenizationService.prototype;
+
 describe('tokenizationService', () => {
-  describe('redactText()', () => {
+  describe(`${CrossbowTokenizationService.redactText.name}()`, () => {
     it('should redact code blocks (```) from a string, leaving spaces in its place', () => {
       const input___ = 'This is a ```\ncode block\n``` string';
       const expected = 'This is a    \n          \n    string';
@@ -90,7 +92,7 @@ describe('tokenizationService', () => {
     });
   });
 
-  describe('cleanWord()', () => {
+  describe(`${CrossbowTokenizationService.cleanWord.name}()`, () => {
     it('should remove anything but alphanumeric chars from a word', () => {
       const input = 'Word$¨\'^!"*ç"*ç%&/()=?`*';
       const expected = 'Word';
@@ -99,7 +101,7 @@ describe('tokenizationService', () => {
     });
   });
 
-  describe('getWordLookupFromEditor()', () => {
+  describe(`${proto.getWordLookupFromEditor.name}()`, () => {
     const mockEditor = (value: string) => {
       return {
         value,

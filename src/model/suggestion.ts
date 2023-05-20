@@ -40,7 +40,7 @@ export class Occurrence implements ITreeVisualizable {
     return `${this.editorPosition.line}:${this.editorPosition.ch}`;
   }
   public get text(): string {
-    return `On line ${this.editorPosition.line}:${this.editorPosition.ch}`;
+    return `On line ${this.editorPosition.line + 1}:${this.editorPosition.ch + 1}`;
   }
 
   public sortChildren(): void {

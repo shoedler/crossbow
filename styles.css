@@ -3,10 +3,16 @@
 }
 
 .cb-tree-item-inner-suffix {
-  /* font-style: italic; */
   padding-left: 0.2rem;
   color: var(--text-faint);
   opacity: var(--icon-opacity);
+}
+
+.cb-tree-item-inner-subtitle {
+  display: block;
+  color: var(--color-base-40);
+  opacity: var(--icon-opacity);
+  font-size: var(--font-smallest);
 }
 
 .cb-tree-item-button {

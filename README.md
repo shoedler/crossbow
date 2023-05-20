@@ -61,14 +61,13 @@ graph TD
     START((Start))
     Q_ACT_EDITOR["1. <b>Cache key</b> stems from active editor? <br>Configurable, see setting <i>Make suggestions to items in the same file</i>"]
     Q_EXCT_MATCH["2. Exact match (case sensitive) between <b>word</b> and <b>cache key</b>?"]
-    Q_WORD_IGNOR["3. <b>Word</b> is on ignore list? (case sensitive) <br>Configurable, see setting <i>Ignored words</i>"]
-    Q_WORD_SHORT["4. <b>Word</b> is too short? (Currently fixed to 3 chars)"]
-    Q_CKEY_SHORT["5. <b>Cache key</b> is too short? <br>Configurable, see setting <i>Minimum word length of suggestions</i>"]
-    Q_IS_SUBSTRG["6. <b>Word</b> is a substring of <b>cache key</b> or vice versa?"]
-    Q_WORD_UCASE["7. <b>Word</b> starts with an uppercase letter? <br>Configurable, see setting <i>Ignore occurrences which start with a lowercase letter</i>"]
-    Q_CKEY_UCASE["8. <b>Cache key</b> starts with an uppercase letter? <br>Configurable, see setting <i>Ignore suggestions which start with a lowercase letter</i>"]
-    Q_MATCH_INSV["9. Exact match (case insensitive) between <b>word</b> and <b>cache key</b>?"]
-    Q_LEN_SIMILR["10. Similarity of less than 20% length-wise between <b>word</b> and <b>cache key</b>?"]
+    Q_WORD_SHORT["3. <b>Word</b> is too short? (Currently fixed to 3 chars)"]
+    Q_CKEY_SHORT["4. <b>Cache key</b> is too short? <br>Configurable, see setting <i>Minimum word length of suggestions</i>"]
+    Q_IS_SUBSTRG["5. <b>Word</b> is a substring of <b>cache key</b> or vice versa?"]
+    Q_WORD_UCASE["6. <b>Word</b> starts with an uppercase letter? <br>Configurable, see setting <i>Ignore occurrences which start with a lowercase letter</i>"]
+    Q_CKEY_UCASE["7. <b>Cache key</b> starts with an uppercase letter? <br>Configurable, see setting <i>Ignore suggestions which start with a lowercase letter</i>"]
+    Q_MATCH_INSV["8. Exact match (case insensitive) between <b>word</b> and <b>cache key</b>?"]
+    Q_LEN_SIMILR["9. Similarity of less than 20% length-wise between <b>word</b> and <b>cache key</b>?"]
 
     STOP((STOP))
 
@@ -84,10 +83,7 @@ graph TD
     Q_ACT_EDITOR -- No --> Q_EXCT_MATCH
 
     Q_EXCT_MATCH -- Yes --> SUCCESS_1 --> STOP
-    Q_EXCT_MATCH -- No --> Q_WORD_IGNOR
-
-    Q_WORD_IGNOR -- Yes --> STOP
-    Q_WORD_IGNOR -- No --> Q_WORD_SHORT
+    Q_EXCT_MATCH -- No --> Q_WORD_SHORT
 
     Q_WORD_SHORT -- Yes --> STOP
     Q_WORD_SHORT -- No --> Q_CKEY_SHORT
@@ -110,7 +106,22 @@ graph TD
     Q_LEN_SIMILR -- No --> SUCCESS_3 --> STOP
 ```
 
-Keep in mind that these steps are processed in order. For example, take a look at the length filter in step 10. At this point, the **word** and **cache key** are already a substring of each other (step 6), meaning that this step adds things like "donut" and "donut hole punching machine manual". Not things that are in general vastly different to each other, which would create a lot of false positives.
+Then, suggestions which match the ignored words are removed:
+
+```mermaid
+graph TD
+    START((START))
+    FE["For each result"]
+    Q_WORD_IGNOR["Remove if <b>Word</b> is on ignore list (case sensitive) <br>Configurable, see setting <i>Ignored words</i>"]
+    STOP((STOP))
+
+    START --> FE
+    FE --> Q_WORD_IGNOR
+    Q_WORD_IGNOR --> FE
+    Q_WORD_IGNOR --> STOP
+```
+
+Keep in mind that these steps are processed in order. For example, take a look at the length filter in step 9. At this point, the **word** and **cache key** are already a substring of each other (step 5), meaning that this step adds things like "donut" and "donut hole punching machine manual". Not things that are in general vastly different to each other, which would create a lot of false positives.
 
 ## How to install manually
 

@@ -10,10 +10,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { CacheItem, CachedMetadata, TFile, Vault } from 'obsidian';
+import { CacheItem, CachedMetadata, TAbstractFile, TFile, Vault } from 'obsidian';
+import { CrossbowLoggingService } from './loggingService';
 import { CrossbowSettingsService } from './settingsService';
 
 type CacheEntryLookup = { [key: string]: CacheEntry };
+export type SourceCacheEntryLookupMap = { [key: TFile['path']]: CacheEntryLookup };
 
 export interface CacheEntry {
   file: TFile;
@@ -27,56 +29,77 @@ export interface CacheMatch extends CacheEntry {
 }
 
 export class CrossbowIndexingService {
-  private readonly crossbowCache: CacheEntryLookup = {};
+  private crossbowCache: SourceCacheEntryLookupMap = {};
 
-  public constructor(private readonly settingsService: CrossbowSettingsService) {}
+  public constructor(
+    private readonly settingsService: CrossbowSettingsService,
+    private readonly loggingService: CrossbowLoggingService
+  ) {}
 
-  private addOrUpdateCacheEntry(entry: CacheEntry): void {
-    this.crossbowCache[entry.text] = entry;
+  private addOrUpdateCacheEntry(entry: CacheEntry, source: TFile): void {
+    this.crossbowCache[source.path] = this.crossbowCache[source.path] ? this.crossbowCache[source.path] : {};
+    this.crossbowCache[source.path][entry.text] = entry;
   }
 
-  public getCache(): CacheEntryLookup {
+  public getCache(): SourceCacheEntryLookupMap {
     return this.crossbowCache;
   }
 
   public indexVault(vault: Vault): void {
+    this.clearCache();
+
     const files = vault.getFiles();
     files.forEach((file) => this.indexFile(file));
+  }
+
+  public clearCacheFromFile(path: string): void;
+  public clearCacheFromFile(file: TAbstractFile): void;
+  public clearCacheFromFile(fileOrPath: TAbstractFile | string): void {
+    const path = typeof fileOrPath === 'string' ? fileOrPath : fileOrPath.path;
+    this.loggingService.debugLog(`Clearing cache for file ${path}`);
+    delete this.crossbowCache[path];
   }
 
   // 'cache' can be passed in, if this is called from an event handler which already has the cache
   // This will prevent the cache from being retrieved twice
   public indexFile(file: TFile, cache?: CachedMetadata): void {
     if (file.extension !== 'md') return;
+    if (cache) this.clearCacheFromFile(file);
 
     const metadata = cache ? cache : app.metadataCache.getFileCache(file);
 
     if (file.basename.length >= this.settingsService.getSettings().minimumSuggestionWordLength)
-      this.addOrUpdateCacheEntry({ file, text: file.basename, type: 'File' });
+      this.addOrUpdateCacheEntry({ file, text: file.basename, type: 'File' }, file);
 
     if (metadata) {
       if (metadata.headings)
         metadata.headings.forEach((headingCache) =>
-          this.addOrUpdateCacheEntry({
-            item: headingCache,
-            file,
-            text: headingCache.heading,
-            type: 'Heading',
-          })
+          this.addOrUpdateCacheEntry(
+            {
+              item: headingCache,
+              file,
+              text: headingCache.heading,
+              type: 'Heading',
+            },
+            file
+          )
         );
       if (metadata.tags)
         metadata.tags.forEach((tagCache) =>
-          this.addOrUpdateCacheEntry({
-            item: tagCache,
-            file,
-            text: tagCache.tag,
-            type: 'Tag',
-          })
+          this.addOrUpdateCacheEntry(
+            {
+              item: tagCache,
+              file,
+              text: tagCache.tag,
+              type: 'Tag',
+            },
+            file
+          )
         );
     }
   }
 
   public clearCache(): void {
-    Object.assign(this.crossbowCache, {});
+    this.crossbowCache = {};
   }
 }

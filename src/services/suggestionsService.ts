@@ -27,77 +27,97 @@ export class CrossbowSuggestionsService {
 
     const result: Suggestion[] = [];
     const cache = this.indexingService.getCache();
+    const settings = this.settingsService.getSettings();
 
-    Object.entries(wordLookup).forEach((entry) => {
-      const [word, editorPositions] = entry;
+    const wordEntries = Object.entries(wordLookup);
+
+    for (let i = 0; i < wordEntries.length; i++) {
+      const [word, editorPositions] = wordEntries[i];
+      const lowercaseWord = word.toLowerCase();
+
       const matchSet: Set<CacheMatch> = new Set();
 
-      // Find matches
-      Object.keys(cache).forEach((cacheKey) => {
-        const lowercaseWord = word.toLowerCase();
-        const lowercaseCacheKey = cacheKey.toLowerCase();
+      // Find matches in the cache
+      const cacheValues = Object.values(cache);
 
-        // If reference is in the same file, and we don't want to suggest references in the same file, skip
-        if (!this.settingsService.getSettings().suggestInSameFile && cache[cacheKey].file === currentFile) return;
+      for (let j = 0; j < cacheValues.length; j++) {
+        const cacheLookup = cacheValues[j];
+        const cacheEntries = Object.entries(cacheLookup);
 
-        // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
-        // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
-        if (cacheKey === word) {
-          matchSet.add({ ...cache[cacheKey], rank: '🏆' });
-          return;
+        for (let k = 0; k < cacheEntries.length; k++) {
+          const [cacheKey, cacheValue] = cacheEntries[k];
+          const lowercaseCacheKey = cacheKey.toLowerCase();
+
+          if (matchSet.size >= 100) continue;
+
+          // If reference is in the same file, and we don't want to suggest references in the same file, skip
+          if (!this.settingsService.getSettings().suggestInSameFile && cacheValue.file === currentFile) continue;
+
+          // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
+          // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
+          if (cacheKey === word) {
+            matchSet.add({ ...cacheValue, rank: '🏆' });
+            continue;
+          }
+
+          // If the word is too short, skip
+          if (word.length <= 3) continue;
+
+          // If the cache key is too short, skip
+          if (cacheKey.length <= settings.minimumSuggestionWordLength) continue;
+
+          // If the word is not a substring of the key or the key is not a substring of the word, skip
+          if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false)
+            continue;
+
+          // If the word does not start with an uppercase letter, skip
+          if (settings.ignoreOccurrencesWhichStartWithLowercaseLetter && cacheKey[0] === lowercaseCacheKey[0]) continue;
+
+          // If the cache key does not start with an uppercase letter, skip
+          if (settings.ignoreSuggestionsWhichStartWithLowercaseLetter && word[0] === lowercaseWord[0]) continue;
+
+          // If the word is a case-insensitive exact match, add as a very good suggestion
+          if (lowercaseCacheKey === lowercaseWord) {
+            matchSet.add({ ...cacheValue, rank: '🥇' });
+            continue;
+          }
+
+          // If the lengths differ too much, add as not-very-good suggestion
+          if ((1 / cacheKey.length) * word.length <= 0.2) {
+            matchSet.add({ ...cacheValue, rank: '🥉' });
+            continue;
+          }
+
+          // Else, add as a mediocre suggestion
+          matchSet.add({ ...cacheValue, rank: '🥈' });
         }
-
-        // If the word is on the ignore list, skip
-        if (this.settingsService.getSettings().ignoredWordsCaseSensisitve.includes(word)) return;
-
-        // If the word is too short, skip
-        if (word.length <= 3) return;
-
-        // If the cache key is too short, skip
-        if (cacheKey.length <= this.settingsService.getSettings().minimumSuggestionWordLength) return;
-
-        // If the word is not a substring of the key or the key is not a substring of the word, skip
-        if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false) return;
-
-        // If the word does not start with an uppercase letter, skip
-        if (
-          this.settingsService.getSettings().ignoreOccurrencesWhichStartWithLowercaseLetter &&
-          cacheKey[0] === lowercaseCacheKey[0]
-        )
-          return;
-
-        // If the cache key does not start with an uppercase letter, skip
-        if (
-          this.settingsService.getSettings().ignoreSuggestionsWhichStartWithLowercaseLetter &&
-          word[0] === lowercaseWord[0]
-        )
-          return;
-
-        // If the word is a case-insensitive exact match, add as a very good suggestion
-        if (lowercaseCacheKey === lowercaseWord) {
-          matchSet.add({ ...cache[cacheKey], rank: '🥇' });
-          return;
-        }
-
-        // If the lengths differ too much, add as not-very-good suggestion
-        if ((1 / cacheKey.length) * word.length <= 0.2) {
-          matchSet.add({ ...cache[cacheKey], rank: '🥉' });
-          return;
-        }
-
-        // Else, add as a mediocre suggestion
-        matchSet.add({ ...cache[cacheKey], rank: '🥈' });
-      });
+      }
 
       if (matchSet.size > 0) {
         const matches = Array.from(matchSet).map((m) => new Match(m));
         const occurrences = editorPositions.map((p) => new Occurrence(p, matches));
         result.push(new Suggestion(word, occurrences));
       }
-    });
+    }
 
     // Sort the result
     result.sort((a, b) => a.hash.localeCompare(b.hash)).forEach((suggestion) => suggestion.sortChildren());
+
+    // Remove ignored words from the result
+    return this.removeIgnoredWords(result);
+  }
+
+  private removeIgnoredWords(suggestions: Suggestion[]): Suggestion[] {
+    const ignoredWordsCaseSensisitve = this.settingsService.getSettings().ignoredWordsCaseSensisitve;
+    const ignoredWordsCache: { [key: string]: boolean } = {};
+
+    const result = suggestions.filter((suggestion) => {
+      if (ignoredWordsCache[suggestion.word] === undefined) {
+        ignoredWordsCache[suggestion.word] = !ignoredWordsCaseSensisitve.includes(suggestion.word);
+      }
+
+      return ignoredWordsCache[suggestion.word];
+    });
 
     return result;
   }

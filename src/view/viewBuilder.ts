@@ -125,6 +125,8 @@ const createMatchTreeItems = (
 
     matchTreeItem.addTextSuffix(match.cacheMatch.type);
 
+    if (match.cacheMatch.type !== 'File') matchTreeItem.addSubtitle(match.cacheMatch.file.name);
+
     return matchTreeItem;
   });
 };
