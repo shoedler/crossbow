@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { App, CachedMetadata, MarkdownView, Plugin, PluginManifest, TFile } from 'obsidian';
+import { App, CachedMetadata, MarkdownView, Plugin, PluginManifest, TAbstractFile, TFile } from 'obsidian';
 import { CrossbowViewController } from './controllers/viewController';
 import { registerCrossbowIcons } from './icons';
 import { CrossbowIndexingService } from './services/indexingService';
@@ -39,7 +39,7 @@ export default class CrossbowPlugin extends Plugin {
 
     this.settingsService = new CrossbowSettingsService(this.onSettingsChanged);
     this.loggingService = new CrossbowLoggingService(this.settingsService);
-    this.indexingService = new CrossbowIndexingService(this.settingsService);
+    this.indexingService = new CrossbowIndexingService(this.settingsService, this.loggingService);
     this.tokenizationService = new CrossbowTokenizationService();
     this.suggestionsService = new CrossbowSuggestionsService(this.settingsService, this.indexingService);
 
@@ -72,12 +72,16 @@ export default class CrossbowPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
     this.registerEvent(this.app.metadataCache.on('changed', this.onMetadataChange));
 
+    this.registerEvent(this.app.vault.on('rename', this.onFileRename));
+    this.registerEvent(this.app.vault.on('delete', this.onFileDelete));
+
     this.loggingService.debugLog('Crossbow is ready.');
   }
 
   public onunload(): void {
     this.viewController.unloadView();
     this.indexingService.clearCache();
+
     this.loggingService.debugLog('Unloaded Crossbow.');
   }
 
@@ -91,8 +95,19 @@ export default class CrossbowPlugin extends Plugin {
       // Only update cache for the current file
       this.indexingService.indexFile(file, cache);
       this.runWithoutCacheUpdate(false);
-      this.loggingService.debugLog(`Metadata cache updated for ${file.basename}.`);
+      this.loggingService.debugLog(`⚡Metadata cache updated. '${file.basename}'`);
     }, this.settingsService.getSettings().autoRefreshDelayMs); // This value is arbitrary (Min. 2600ms). 'onMetadataChange' get's triggerd every ~2 to ~2.5 seconds.
+  };
+
+  private onFileDelete = (file: TAbstractFile): void => {
+    this.loggingService.debugLog(`⚡File deleted. '${file.name}'`);
+    this.indexingService.clearCacheFromFile(file);
+  };
+
+  private onFileRename = (file: TAbstractFile, oldPath: string): void => {
+    this.loggingService.debugLog(`⚡File renamed. '${file.name}'`);
+    this.indexingService.clearCacheFromFile(oldPath);
+    this.app.metadataCache.trigger('changed', file as TFile, ''); // Trigger metadata change to update cache
   };
 
   private onFileOpen = (): void => {
@@ -101,7 +116,7 @@ export default class CrossbowPlugin extends Plugin {
     const prevCurrentFile = this.currentFile;
 
     this.setActiveFile();
-    this.loggingService.debugLog(`File ${this.currentFile?.basename} opened.`);
+    this.loggingService.debugLog(`⚡File opened. '${this.currentFile?.basename}`);
 
     if (this.fileOpenTimeout) clearTimeout(this.fileOpenTimeout);
 
@@ -112,7 +127,7 @@ export default class CrossbowPlugin extends Plugin {
   };
 
   private onSettingsChanged = async (settings: CrossbowPluginSettings) => {
-    this.loggingService.debugLog('Settings saved.');
+    this.loggingService.debugLog('⚡Settings saved.');
     await this.saveData(settings);
     this.runWithCacheUpdate(true);
   };
@@ -143,6 +158,6 @@ export default class CrossbowPlugin extends Plugin {
     const leaf = this.app.workspace.getMostRecentLeaf();
     if (leaf?.view instanceof MarkdownView) {
       this.currentFile = leaf.view.file;
-    } else console.warn('🏹: Unable to determine current editor.');
+    } else CrossbowLoggingService.forceLog('warn', 'Unable to determine current editor.');
   }
 }
