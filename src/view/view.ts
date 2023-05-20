@@ -11,9 +11,10 @@
 // GNU General Public License for more details.
 
 import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
+import { CrossbowViewController } from 'src/controllers/viewController';
 import { Suggestion } from 'src/model/suggestion';
 import { TreeItem } from './treeItem';
-import { CrossbowViewController } from 'src/controllers/viewController';
+import { viewBuilder } from './viewBuilder';
 
 export class CrossbowView extends ItemView {
   private readonly treeEl: HTMLElement;
@@ -22,9 +23,9 @@ export class CrossbowView extends ItemView {
   constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => any) {
     super(leaf);
     this.controlsEl = this.contentEl.createDiv({ cls: 'cb-view-controls' });
-    this.treeEl = this.contentEl.createDiv({ cls: 'cb-view-tree'});
+    this.treeEl = this.contentEl.createDiv({ cls: 'cb-view-tree' });
 
-    CrossbowViewController.createManualRefreshButton(this.controlsEl, this.onManualRefreshButtonClick);
+    viewBuilder.createManualRefreshButton(this.controlsEl, this.onManualRefreshButtonClick);
     this.treeEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
   }
 
@@ -52,9 +53,7 @@ export class CrossbowView extends ItemView {
   }
 
   public update(suggestions: Suggestion[], targetEditor: Editor, showManualRefreshButton: boolean): void {
-    showManualRefreshButton ?
-      this.getManualRefreshButton().show() :
-      this.getManualRefreshButton().hide();
+    showManualRefreshButton ? this.getManualRefreshButton().show() : this.getManualRefreshButton().hide();
 
     this.addOrUpdateSuggestions(suggestions, targetEditor);
   }
@@ -67,7 +66,7 @@ export class CrossbowView extends ItemView {
       const index = currentSuggestionTreeItems.findIndex((item) => item.hash === suggestion.hash);
       const existingSuggestion = index !== -1 ? currentSuggestionTreeItems.splice(index, 1)[0] : undefined;
 
-      const suggestionTreeItem = CrossbowViewController.createSuggestionTreeItem(suggestion, targetEditor);
+      const suggestionTreeItem = viewBuilder.createSuggestionTreeItem(suggestion, targetEditor);
 
       if (existingSuggestion) {
         const expandedOccurrencesHashes = existingSuggestion
@@ -102,7 +101,7 @@ export class CrossbowView extends ItemView {
   }
 
   private getManualRefreshButton(): HTMLElement {
-    return this.controlsEl.querySelector("#" + CrossbowViewController.MANUAL_REFRESH_BUTTON_ID) as HTMLElement;
+    return this.controlsEl.querySelector('#' + CrossbowViewController.MANUAL_REFRESH_BUTTON_ID) as HTMLElement;
   }
 
   private getCurrentSuggestions(): TreeItem<Suggestion>[] {
