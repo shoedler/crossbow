@@ -15,7 +15,7 @@ import { CrossbowLoggingService } from './loggingService';
 import { CrossbowSettingsService } from './settingsService';
 
 type CacheEntryLookup = { [key: string]: CacheEntry };
-type SourceLookup = { [key: TFile['path']]: CacheEntry[] };
+export type SourceCacheEntryLookupMap = { [key: TFile['path']]: CacheEntryLookup };
 
 export interface CacheEntry {
   file: TFile;
@@ -29,8 +29,7 @@ export interface CacheMatch extends CacheEntry {
 }
 
 export class CrossbowIndexingService {
-  private crossbowCache: CacheEntryLookup = {};
-  private sourceFileLookup: SourceLookup = {};
+  private crossbowCache: SourceCacheEntryLookupMap = {};
 
   public constructor(
     private readonly settingsService: CrossbowSettingsService,
@@ -38,12 +37,11 @@ export class CrossbowIndexingService {
   ) {}
 
   private addOrUpdateCacheEntry(entry: CacheEntry, source: TFile): void {
-    this.crossbowCache[entry.text] = entry;
-    this.sourceFileLookup[source.path] = this.sourceFileLookup[source.path] ?? [];
-    this.sourceFileLookup[source.path].push(entry);
+    this.crossbowCache[source.path] = this.crossbowCache[source.path] ? this.crossbowCache[source.path] : {};
+    this.crossbowCache[source.path][entry.text] = entry;
   }
 
-  public getCache(): CacheEntryLookup {
+  public getCache(): SourceCacheEntryLookupMap {
     return this.crossbowCache;
   }
 
@@ -58,15 +56,8 @@ export class CrossbowIndexingService {
   public clearCacheFromFile(file: TAbstractFile): void;
   public clearCacheFromFile(fileOrPath: TAbstractFile | string): void {
     const path = typeof fileOrPath === 'string' ? fileOrPath : fileOrPath.path;
-
     this.loggingService.debugLog(`Clearing cache for file ${path}`);
-
-    const sourceEntries = this.sourceFileLookup[path];
-
-    if (sourceEntries) {
-      sourceEntries.forEach((entry) => delete this.crossbowCache[entry.text]);
-      delete this.sourceFileLookup[path];
-    }
+    delete this.crossbowCache[path];
   }
 
   // 'cache' can be passed in, if this is called from an event handler which already has the cache
@@ -110,6 +101,5 @@ export class CrossbowIndexingService {
 
   public clearCache(): void {
     this.crossbowCache = {};
-    this.sourceFileLookup = {};
   }
 }

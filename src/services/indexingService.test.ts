@@ -11,7 +11,7 @@
 // GNU General Public License for more details.
 
 import { CachedMetadata, FileStats, HeadingCache, TFile, TFolder, TagCache, Vault } from 'obsidian';
-import { CrossbowIndexingService } from './indexingService';
+import { CrossbowIndexingService, SourceCacheEntryLookupMap } from './indexingService';
 import { CrossbowLoggingService } from './loggingService';
 import { CrossbowSettingsService, DEFAULT_SETTINGS } from './settingsService';
 
@@ -26,19 +26,17 @@ describe('indexingService', () => {
       const service = createServiceMock();
 
       service.indexFile(file, metadata);
-      const cache = service.getCache();
+      const fileCache = service.getCache()[file.path];
 
       // Key count
-      expect(Object.keys(cache)).toHaveLength(5);
-      expect(Object.values(cache).filter((value) => value.type === 'File')).toHaveLength(1);
-      expect(Object.values(cache).filter((value) => value.type === 'Heading')).toHaveLength(3);
-      expect(Object.values(cache).filter((value) => value.type === 'Tag')).toHaveLength(1);
-
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(1);
+      expect(Object.keys(fileCache)).toHaveLength(5);
+      expect(Object.values(fileCache).filter((value) => value.type === 'File')).toHaveLength(1);
+      expect(Object.values(fileCache).filter((value) => value.type === 'Heading')).toHaveLength(3);
+      expect(Object.values(fileCache).filter((value) => value.type === 'Tag')).toHaveLength(1);
 
       // Should contain file cache entry
-      expect(cache[fileName]).toBeDefined();
-      expect(cache[fileName].type).toBe('File');
+      expect(fileCache[fileName]).toBeDefined();
+      expect(fileCache[fileName].type).toBe('File');
 
       if (metadata.headings === undefined) {
         throw new Error('Metadata headings are undefined');
@@ -46,10 +44,10 @@ describe('indexingService', () => {
 
       // Should contain heading cache entries
       metadata.headings.forEach((headingCache) => {
-        expect(cache[headingCache.heading]).toBeDefined();
-        expect(cache[headingCache.heading].type).toBe('Heading');
-        expect(cache[headingCache.heading].file).toBe(file);
-        expect(cache[headingCache.heading].text).toBe(headingCache.heading);
+        expect(fileCache[headingCache.heading]).toBeDefined();
+        expect(fileCache[headingCache.heading].type).toBe('Heading');
+        expect(fileCache[headingCache.heading].file).toBe(file);
+        expect(fileCache[headingCache.heading].text).toBe(headingCache.heading);
       });
 
       if (metadata.tags === undefined) {
@@ -58,10 +56,10 @@ describe('indexingService', () => {
 
       // Should contain tag cache entries
       metadata.tags.forEach((tagCache) => {
-        expect(cache[tagCache.tag]).toBeDefined();
-        expect(cache[tagCache.tag].type).toBe('Tag');
-        expect(cache[tagCache.tag].file).toBe(file);
-        expect(cache[tagCache.tag].text).toBe(tagCache.tag);
+        expect(fileCache[tagCache.tag]).toBeDefined();
+        expect(fileCache[tagCache.tag].type).toBe('Tag');
+        expect(fileCache[tagCache.tag].file).toBe(file);
+        expect(fileCache[tagCache.tag].text).toBe(tagCache.tag);
       });
     });
 
@@ -71,10 +69,10 @@ describe('indexingService', () => {
       const service = createServiceMock();
 
       service.indexFile(file, metadata);
-      expect(Object.keys(service.getCache())).toHaveLength(5);
+      expect(Object.keys(service.getCache()[file.path])).toHaveLength(5);
 
       service.indexFile(file, metadata);
-      expect(Object.keys(service.getCache())).toHaveLength(5);
+      expect(Object.keys(service.getCache()[file.path])).toHaveLength(5);
     });
   });
 
@@ -85,31 +83,15 @@ describe('indexingService', () => {
       const service = createServiceMock();
 
       service.indexFile(file, metadata);
-      expect(Object.keys(service.getCache())).toHaveLength(5);
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(1);
+      expect(Object.keys(service.getCache()[file.path])).toHaveLength(5);
 
       service.clearCacheFromFile(file);
-      expect(Object.keys(service.getCache())).toHaveLength(0);
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(0);
+
+      expect(service.getCache()[file.path]).toBeUndefined();
+      expect(Object.keys(Object.keys(service.getCache()).filter((filePath) => filePath === file.path))).toHaveLength(0);
     });
 
     it("shouldn't clear cache entries (headings, tags and the file) of other files", () => {
-      const file = createFileMock('testFile');
-      const metadata = createMetadataCacheMock();
-      const service = createServiceMock();
-
-      service.indexFile(file, metadata);
-      expect(Object.keys(service.getCache())).toHaveLength(5);
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(1);
-
-      service.clearCacheFromFile(file);
-      expect(Object.keys(service.getCache())).toHaveLength(0);
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(0);
-    });
-  });
-
-  describe(`${proto.clearCache.name}()`, () => {
-    it('should clear cache (and sourceFileLookup)', () => {
       const fileName1 = 'testFile';
       const file1 = createFileMock(fileName1);
       const metadata1 = createMetadataCacheMock();
@@ -123,12 +105,38 @@ describe('indexingService', () => {
       service.indexFile(file1, metadata1);
       service.indexFile(file2, metadata2);
 
-      expect(Object.keys(service.getCache())).toHaveLength(10);
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(2);
+      expect(countCacheEntries(service.getCache())).toEqual(10);
+      expect(getCacheSources(service.getCache())).toEqual([file1.path, file2.path]);
+
+      service.clearCacheFromFile(file1);
+
+      expect(countCacheEntries(service.getCache())).toEqual(5);
+      expect(getCacheSources(service.getCache())).toEqual([file2.path]);
+    });
+  });
+
+  describe(`${proto.clearCache.name}()`, () => {
+    it('should clear cache', () => {
+      const fileName1 = 'testFile';
+      const file1 = createFileMock(fileName1);
+      const metadata1 = createMetadataCacheMock();
+
+      const fileName2 = 'testFile2';
+      const file2 = createFileMock(fileName2);
+      const metadata2 = createMetadataCacheMock();
+
+      const service = createServiceMock();
+
+      service.indexFile(file1, metadata1);
+      service.indexFile(file2, metadata2);
+
+      expect(countCacheEntries(service.getCache())).toEqual(10);
+      expect(getCacheSources(service.getCache())).toEqual([file1.path, file2.path]);
 
       service.clearCache();
-      expect(Object.keys(service.getCache())).toHaveLength(5);
-      expect(Object.keys(getSourceLookup(service))).toHaveLength(1);
+
+      expect(countCacheEntries(service.getCache())).toEqual(0);
+      expect(getCacheSources(service.getCache())).toEqual([]);
     });
   });
 });
@@ -140,11 +148,6 @@ settingsServiceMock.saveSettings(DEFAULT_SETTINGS);
 
 const createServiceMock = (): CrossbowIndexingService =>
   new CrossbowIndexingService(settingsServiceMock, loggingService);
-
-const getSourceLookup = (service: CrossbowIndexingService): object => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (service as any).sourceFileLookup as object;
-};
 
 const createFileMock = (fileName: string): TFile => ({
   basename: fileName,
@@ -182,3 +185,7 @@ const createMetadataCacheMock = (headingsCount = 3, tagsCount = 1): CachedMetada
 
   return { headings, tags };
 };
+
+const getCacheSources = (cache: SourceCacheEntryLookupMap): string[] => Object.keys(cache);
+const countCacheEntries = (cache: SourceCacheEntryLookupMap): number =>
+  Object.values(cache).reduce((a, b) => a + Object.values(b).length, 0);

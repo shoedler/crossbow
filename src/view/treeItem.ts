@@ -33,6 +33,7 @@ export enum TreeItemButtonIcon {
 export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
   private readonly inner: HTMLDivElement;
   private readonly suffix: HTMLSpanElement;
+  private readonly subtitle: HTMLSpanElement;
   private readonly flair: HTMLSpanElement;
   protected readonly buttons: ButtonComponent[] = [];
   protected readonly mainWrapper: HTMLDivElement;
@@ -70,6 +71,9 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
     this.suffix = this.inner.createEl('span', {
       cls: 'cb-tree-item-inner-suffix',
     });
+    this.subtitle = this.inner.createEl('span', {
+      cls: 'cb-tree-item-inner-subtitle',
+    });
     this.flair = this.flairWrapper.createEl('span', {
       cls: 'tree-item-flair',
     });
@@ -90,6 +94,10 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
 
   public addTextSuffix(text: string): void {
     this.suffix.innerText = text;
+  }
+
+  public addSubtitle(text: string): void {
+    this.subtitle.innerText = text;
   }
 
   public addButton(

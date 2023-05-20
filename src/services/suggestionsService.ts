@@ -26,67 +26,70 @@ export class CrossbowSuggestionsService {
     if (!wordLookup) return [];
 
     const result: Suggestion[] = [];
-    const cache = this.indexingService.getCache();
+    const fileCacheEntryLookupMap = this.indexingService.getCache();
 
     Object.entries(wordLookup).forEach((entry) => {
       const [word, editorPositions] = entry;
       const matchSet: Set<CacheMatch> = new Set();
 
       // Find matches
-      Object.keys(cache).forEach((cacheKey) => {
-        const lowercaseWord = word.toLowerCase();
-        const lowercaseCacheKey = cacheKey.toLowerCase();
+      Object.values(fileCacheEntryLookupMap).forEach((cache) => {
+        Object.keys(cache).forEach((cacheKey) => {
+          const lowercaseWord = word.toLowerCase();
+          const lowercaseCacheKey = cacheKey.toLowerCase();
 
-        // If reference is in the same file, and we don't want to suggest references in the same file, skip
-        if (!this.settingsService.getSettings().suggestInSameFile && cache[cacheKey].file === currentFile) return;
+          // If reference is in the same file, and we don't want to suggest references in the same file, skip
+          if (!this.settingsService.getSettings().suggestInSameFile && cache[cacheKey].file === currentFile) return;
 
-        // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
-        // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
-        if (cacheKey === word) {
-          matchSet.add({ ...cache[cacheKey], rank: '🏆' });
-          return;
-        }
+          // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
+          // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
+          if (cacheKey === word) {
+            matchSet.add({ ...cache[cacheKey], rank: '🏆' });
+            return;
+          }
 
-        // If the word is on the ignore list, skip
-        if (this.settingsService.getSettings().ignoredWordsCaseSensisitve.includes(word)) return;
+          // If the word is on the ignore list, skip
+          if (this.settingsService.getSettings().ignoredWordsCaseSensisitve.includes(word)) return;
 
-        // If the word is too short, skip
-        if (word.length <= 3) return;
+          // If the word is too short, skip
+          if (word.length <= 3) return;
 
-        // If the cache key is too short, skip
-        if (cacheKey.length <= this.settingsService.getSettings().minimumSuggestionWordLength) return;
+          // If the cache key is too short, skip
+          if (cacheKey.length <= this.settingsService.getSettings().minimumSuggestionWordLength) return;
 
-        // If the word is not a substring of the key or the key is not a substring of the word, skip
-        if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false) return;
+          // If the word is not a substring of the key or the key is not a substring of the word, skip
+          if ((lowercaseCacheKey.includes(lowercaseWord) || lowercaseWord.includes(lowercaseCacheKey)) === false)
+            return;
 
-        // If the word does not start with an uppercase letter, skip
-        if (
-          this.settingsService.getSettings().ignoreOccurrencesWhichStartWithLowercaseLetter &&
-          cacheKey[0] === lowercaseCacheKey[0]
-        )
-          return;
+          // If the word does not start with an uppercase letter, skip
+          if (
+            this.settingsService.getSettings().ignoreOccurrencesWhichStartWithLowercaseLetter &&
+            cacheKey[0] === lowercaseCacheKey[0]
+          )
+            return;
 
-        // If the cache key does not start with an uppercase letter, skip
-        if (
-          this.settingsService.getSettings().ignoreSuggestionsWhichStartWithLowercaseLetter &&
-          word[0] === lowercaseWord[0]
-        )
-          return;
+          // If the cache key does not start with an uppercase letter, skip
+          if (
+            this.settingsService.getSettings().ignoreSuggestionsWhichStartWithLowercaseLetter &&
+            word[0] === lowercaseWord[0]
+          )
+            return;
 
-        // If the word is a case-insensitive exact match, add as a very good suggestion
-        if (lowercaseCacheKey === lowercaseWord) {
-          matchSet.add({ ...cache[cacheKey], rank: '🥇' });
-          return;
-        }
+          // If the word is a case-insensitive exact match, add as a very good suggestion
+          if (lowercaseCacheKey === lowercaseWord) {
+            matchSet.add({ ...cache[cacheKey], rank: '🥇' });
+            return;
+          }
 
-        // If the lengths differ too much, add as not-very-good suggestion
-        if ((1 / cacheKey.length) * word.length <= 0.2) {
-          matchSet.add({ ...cache[cacheKey], rank: '🥉' });
-          return;
-        }
+          // If the lengths differ too much, add as not-very-good suggestion
+          if ((1 / cacheKey.length) * word.length <= 0.2) {
+            matchSet.add({ ...cache[cacheKey], rank: '🥉' });
+            return;
+          }
 
-        // Else, add as a mediocre suggestion
-        matchSet.add({ ...cache[cacheKey], rank: '🥈' });
+          // Else, add as a mediocre suggestion
+          matchSet.add({ ...cache[cacheKey], rank: '🥈' });
+        });
       });
 
       if (matchSet.size > 0) {

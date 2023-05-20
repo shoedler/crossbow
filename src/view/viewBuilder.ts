@@ -124,6 +124,7 @@ const createMatchTreeItems = (
     });
 
     matchTreeItem.addTextSuffix(match.cacheMatch.type);
+    matchTreeItem.addSubtitle(match.cacheMatch.file.name);
 
     return matchTreeItem;
   });
