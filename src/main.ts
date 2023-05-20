@@ -10,17 +10,17 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { CrossbowView } from './view/view';
+import { App, CachedMetadata, MarkdownView, Plugin, PluginManifest, TFile } from 'obsidian';
+import { CrossbowViewController } from './controllers/viewController';
 import { registerCrossbowIcons } from './icons';
-import { MarkdownView, Plugin, TFile, CachedMetadata, App, PluginManifest } from 'obsidian';
-import { CrossbowSettingTab } from './settings';
-import { registerTreeItemElements } from './view/treeItem';
-import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './services/settingsService';
 import { CrossbowIndexingService } from './services/indexingService';
 import { CrossbowLoggingService } from './services/loggingService';
-import { CrossbowTokenizationService } from './services/tokenizationService';
+import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './services/settingsService';
 import { CrossbowSuggestionsService } from './services/suggestionsService';
-import { CrossbowViewController } from './controllers/viewController';
+import { CrossbowTokenizationService } from './services/tokenizationService';
+import { CrossbowSettingTab } from './settings';
+import { registerTreeItemElements } from './view/treeItem';
+import { CrossbowView } from './view/view';
 
 export default class CrossbowPlugin extends Plugin {
   private readonly settingsService: CrossbowSettingsService;
@@ -101,7 +101,7 @@ export default class CrossbowPlugin extends Plugin {
     const prevCurrentFile = this.currentFile;
 
     this.setActiveFile();
-    this.loggingService.debugLog('File opened.');
+    this.loggingService.debugLog(`File ${this.currentFile?.basename} opened.`);
 
     if (this.fileOpenTimeout) clearTimeout(this.fileOpenTimeout);
 
@@ -120,7 +120,7 @@ export default class CrossbowPlugin extends Plugin {
   private onManualRefreshButtonClick = (): void => {
     this.loggingService.debugLog('Manually triggered update.');
     this.runWithoutCacheUpdate(true);
-  }
+  };
 
   public runWithCacheUpdate(fileHasChanged: boolean): void {
     this.indexingService.indexVault(this.app.vault);
@@ -133,6 +133,9 @@ export default class CrossbowPlugin extends Plugin {
 
     const wordLookup = this.tokenizationService.getWordLookupFromEditor(targetEditor);
     const suggestions = this.suggestionsService.getSuggestionsFromWordlookup(wordLookup, this.currentFile);
+
+    this.loggingService.debugLog(`Created ${suggestions.length} suggestions.`);
+
     this.viewController.addOrUpdateSuggestions(suggestions, targetEditor, fileHasChanged);
   }
 

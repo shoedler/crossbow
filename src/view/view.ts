@@ -13,14 +13,14 @@
 import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
 import { CrossbowViewController } from 'src/controllers/viewController';
 import { Suggestion } from 'src/model/suggestion';
-import { TreeItem } from './treeItem';
+import { ITreeVisualizable, TreeItem } from './treeItem';
 import { viewBuilder } from './viewBuilder';
 
 export class CrossbowView extends ItemView {
   private readonly treeEl: HTMLElement;
   private readonly controlsEl: HTMLElement;
 
-  constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => any) {
+  constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => void) {
     super(leaf);
     this.controlsEl = this.contentEl.createDiv({ cls: 'cb-view-controls' });
     this.treeEl = this.contentEl.createDiv({ cls: 'cb-view-tree' });
@@ -71,13 +71,13 @@ export class CrossbowView extends ItemView {
       if (existingSuggestion) {
         const expandedOccurrencesHashes = existingSuggestion
           .getTreeItems()
-          .filter((item) => !(item as TreeItem<any>).isCollapsed())
+          .filter((item) => !(item as TreeItem<ITreeVisualizable>).isCollapsed())
           .map((item) => item.hash);
 
         suggestionTreeItem.getTreeItems().forEach((occurrence) => {
           // Toggle expanded state, if it was expanded before
           if (expandedOccurrencesHashes.includes(occurrence.hash)) {
-            (occurrence as TreeItem<any>).expand();
+            (occurrence as TreeItem<ITreeVisualizable>).expand();
           }
         });
 

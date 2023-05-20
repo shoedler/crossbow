@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { App, ButtonComponent, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting } from 'obsidian';
 import CrossbowPlugin from './main';
 import { CrossbowPluginSettings, CrossbowSettingsService } from './services/settingsService';
 
@@ -91,7 +91,7 @@ export class CrossbowSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Minimum word length of suggestions')
       .setDisabled(!this.settingsService.getSettings().useAutoRefresh)
-      .setDesc('Defines the min. length an item (Header, Tag) must have for it to be considered a suggestion')
+      .setDesc('Defines the min. length an item (Header, File, Tag) must have for it to be considered a suggestion')
       .addSlider((slider) => {
         slider
           .setLimits(1, 20, 1)
@@ -128,12 +128,10 @@ export class CrossbowSettingTab extends PluginSettingTab {
     let autoRefreshSettingUpdateTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 
     autoRefreshSetting.addToggle((toggle) =>
-      toggle
-        .setValue(this.settingsService.getSettings().useAutoRefresh)
-        .onChange(async (value) => {
-          autoRefreshDelaySetting.setDisabled(!value);
-          await this.updateSettingValue('useAutoRefresh', value);
-        })
+      toggle.setValue(this.settingsService.getSettings().useAutoRefresh).onChange(async (value) => {
+        autoRefreshDelaySetting.setDisabled(!value);
+        await this.updateSettingValue('useAutoRefresh', value);
+      })
     );
 
     autoRefreshDelaySetting.addSlider((slider) => {
@@ -150,14 +148,14 @@ export class CrossbowSettingTab extends PluginSettingTab {
           }, 1000);
         })
         .setDynamicTooltip();
-    })
+    });
   }
 
   private updateSettingValue = async <K extends keyof CrossbowPluginSettings>(
     key: K,
     value: CrossbowPluginSettings[K]
   ) => {
-    const settings = this.settingsService.getSettings()
+    const settings = this.settingsService.getSettings();
     settings[key] = value;
     await this.settingsService.saveSettings(settings);
   };

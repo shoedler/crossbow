@@ -14,17 +14,17 @@ import { Editor, EditorPosition } from 'obsidian';
 
 export type WordLookup = { [key: string]: EditorPosition[] };
 
-const OBSIDIAN_METADATA_REGEX =          /^\n*?---[\s\S]+?---/g;
-const OBSIDIAN_TAG_REGEX =               /#+([a-zA-Z0-9_/]+)/g;
-const OBSIDIAN_LINKS_REGEX =             /\[([^\]]+)\]+/g;
+const OBSIDIAN_METADATA_REGEX = /^\n*?---[\s\S]+?---/g;
+const OBSIDIAN_TAG_REGEX = /#+([a-zA-Z0-9_/]+)/g;
+const OBSIDIAN_LINKS_REGEX = /\[([^\]]+)\]+/g;
 
-const HTML_COMMENT_REGEX =               /<!--[\s\S]+?-->/g;
-const HTML_TAG_REGEX =                   /<\/?[\w\s="/.':;#-\/\?]+>/gm;
+const HTML_COMMENT_REGEX = /<!--[\s\S]+?-->/g;
+const HTML_TAG_REGEX = /<\/?[\w\s="/.':;#-/?]+>/gm;
 
-const MARKDOWN_LATEX_BLOCK_REGEX =       /\$\$([^$]+)\$\$/g;
-const MARKDOWN_LATEX_INLINE_REGEX =      /\$([^$]+)\$/g;
-const MARKDOWN_LINKS_AND_IMAGES_REGEX =  /!?\[([^\]]+)\]\((?:<.*>)?\s*([^\s)]+)\s*\)/gm;
-const MARKDOWN_CODE_BLOCK_REGEX =        /```[\s\S]+?```/g;
+const MARKDOWN_LATEX_BLOCK_REGEX = /\$\$([^$]+)\$\$/g;
+const MARKDOWN_LATEX_INLINE_REGEX = /\$([^$]+)\$/g;
+const MARKDOWN_LINKS_AND_IMAGES_REGEX = /!?\[([^\]]+)\]\((?:<.*>)?\s*([^\s)]+)\s*\)/gm;
+const MARKDOWN_CODE_BLOCK_REGEX = /```[\s\S]+?```/g;
 // const MARKDOWN_ASTERISK_EMPHASIS_REGEX = /([\*]+)(\S)(.*?\S)??\1/g;
 // const MARKDOWN_LODASH_EMPHASIS_REGEX =   /(^|\W)([_]+)(\S)(.*?\S)??\2($|\W)/g;
 // const MARKDOWN_CODE_INLINE_REGEX =       /`(.+?)`/g;
@@ -33,34 +33,30 @@ const MARKDOWN_CODE_BLOCK_REGEX =        /```[\s\S]+?```/g;
 export class CrossbowTokenizationService {
   public constructor() {}
 
-  private readonly SKIP_REGEX = /\s/
+  private readonly SKIP_REGEX = /\s/;
 
   public getWordLookupFromEditor(targetEditor: Editor): WordLookup {
     if (!targetEditor) return {};
-    
+
     const wordLookup: WordLookup = {};
 
     const rawText = targetEditor.getValue();
     const plainText = CrossbowTokenizationService.redactText(rawText);
-    
+
     for (let i = 0; i < plainText.length; i++) {
-      if (plainText[i].match(this.SKIP_REGEX)) 
-        continue;
+      if (plainText[i].match(this.SKIP_REGEX)) continue;
       else {
         let word = '';
-        let pos = targetEditor.offsetToPos(i);
+        const pos = targetEditor.offsetToPos(i);
 
         while (plainText[i] && !plainText[i].match(this.SKIP_REGEX)) word += plainText[i++];
 
         word = CrossbowTokenizationService.cleanWord(word);
 
-        if (word.length  <= 0)
-          continue;
+        if (word.length <= 0) continue;
 
-        if (word in wordLookup) 
-          wordLookup[word].push(pos);
-        else 
-          wordLookup[word] = [pos];
+        if (word in wordLookup) wordLookup[word].push(pos);
+        else wordLookup[word] = [pos];
       }
     }
 
@@ -68,24 +64,24 @@ export class CrossbowTokenizationService {
   }
 
   public static redactText(text: string): string {
-    const muteString = (str: string): string => str.replace(/[^\r\n]+/g, m => ' '.repeat(m.length));
+    const muteString = (str: string): string => str.replace(/[^\r\n]+/g, (m) => ' '.repeat(m.length));
 
     // Order matters here
     return text
-    .replace(MARKDOWN_CODE_BLOCK_REGEX, m => muteString(m))
-    .replace(MARKDOWN_LATEX_BLOCK_REGEX, m => muteString(m))
-    .replace(MARKDOWN_LATEX_INLINE_REGEX, m => muteString(m))
-    .replace(MARKDOWN_LINKS_AND_IMAGES_REGEX, m => muteString(m))
-    .replace(OBSIDIAN_METADATA_REGEX, m => muteString(m))
-    .replace(OBSIDIAN_TAG_REGEX, m => muteString(m))
-    .replace(OBSIDIAN_LINKS_REGEX, m => muteString(m))
-    .replace(HTML_COMMENT_REGEX, m => muteString(m))
-    .replace(HTML_TAG_REGEX, m => muteString(m))
+      .replace(MARKDOWN_CODE_BLOCK_REGEX, (m) => muteString(m))
+      .replace(MARKDOWN_LATEX_BLOCK_REGEX, (m) => muteString(m))
+      .replace(MARKDOWN_LATEX_INLINE_REGEX, (m) => muteString(m))
+      .replace(MARKDOWN_LINKS_AND_IMAGES_REGEX, (m) => muteString(m))
+      .replace(OBSIDIAN_METADATA_REGEX, (m) => muteString(m))
+      .replace(OBSIDIAN_TAG_REGEX, (m) => muteString(m))
+      .replace(OBSIDIAN_LINKS_REGEX, (m) => muteString(m))
+      .replace(HTML_COMMENT_REGEX, (m) => muteString(m))
+      .replace(HTML_TAG_REGEX, (m) => muteString(m));
   }
 
- public static cleanWord(word: string): string {
-  return word
-    .replace(/[^a-z0-9äöü'-]/gi, '') // Remove all non-alphanumeric characters except hyphens and apostrophes
-    .replace(/^[’'-]+|[’'-]+$/gi, ''); // Remove leading and trailing hyphens and apostrophes
+  public static cleanWord(word: string): string {
+    return word
+      .replace(/[^a-z0-9äöü'-]/gi, '') // Remove all non-alphanumeric characters except hyphens and apostrophes
+      .replace(/^[’'-]+|[’'-]+$/gi, ''); // Remove leading and trailing hyphens and apostrophes
   }
 }

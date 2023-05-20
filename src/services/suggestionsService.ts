@@ -10,11 +10,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
-import { WordLookup } from './tokenizationService';
-import { CrossbowSettingsService } from './settingsService';
-import { CacheMatch, CrossbowIndexingService } from './indexingService';
 import { TFile } from 'obsidian';
+import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
+import { CacheMatch, CrossbowIndexingService } from './indexingService';
+import { CrossbowSettingsService } from './settingsService';
+import { WordLookup } from './tokenizationService';
 
 export class CrossbowSuggestionsService {
   public constructor(

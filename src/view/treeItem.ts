@@ -80,7 +80,7 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
     this.buttons.forEach((button) => button.setDisabled(true));
   }
 
-  public addOnClick(listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => any): void {
+  public addOnClick(listener: (this: HTMLDivElement, ev: HTMLElementEventMap['click']) => void): void {
     this.mainWrapper.addEventListener('click', listener);
   }
 
@@ -92,7 +92,11 @@ export class TreeItemLeaf<TData extends ITreeVisualizable> extends HTMLElement {
     this.suffix.innerText = text;
   }
 
-  public addButton(label: string, iconName: TreeItemButtonIcon, onclick: (this: HTMLDivElement, ev: MouseEvent) => any): void {
+  public addButton(
+    label: string,
+    iconName: TreeItemButtonIcon,
+    onclick: (this: HTMLDivElement, ev: MouseEvent) => void
+  ): void {
     const button = new ButtonComponent(this.mainWrapper);
 
     button.setTooltip(label);
@@ -108,13 +112,13 @@ export class TreeItem<TData extends ITreeVisualizable> extends TreeItemLeaf<TDat
   protected readonly childrenWrapper: HTMLDivElement;
   private readonly iconWrapper: HTMLDivElement;
 
-  private childrenFactory: ((self: TreeItem<TData>) => TreeItemLeaf<any>[]) | null = null;
+  private childrenFactory: ((self: TreeItem<TData>) => TreeItemLeaf<ITreeVisualizable>[]) | null = null;
 
   public static register(): void {
     customElements.define('crossbow-tree-item', TreeItem);
   }
 
-  public constructor(value: TData, childrenFactory: (self: TreeItem<TData>) => TreeItemLeaf<any>[]) {
+  public constructor(value: TData, childrenFactory: (self: TreeItem<TData>) => TreeItemLeaf<ITreeVisualizable>[]) {
     super(value);
     this.childrenFactory = childrenFactory;
 
@@ -127,7 +131,7 @@ export class TreeItem<TData extends ITreeVisualizable> extends TreeItemLeaf<TDat
     this.iconWrapper = this.createDiv({
       cls: ['tree-item-icon', 'collapse-icon'],
     });
-    this.iconWrapper.appendChild(getIcon('right-triangle')!);
+    this.iconWrapper.appendChild(getIcon('right-triangle') ?? new SVGElement());
 
     this.appendChild(this.childrenWrapper);
     this.mainWrapper.prepend(this.iconWrapper);
@@ -158,15 +162,15 @@ export class TreeItem<TData extends ITreeVisualizable> extends TreeItemLeaf<TDat
   public setDisable() {
     super.setDisable();
     this.mainWrapper.style.textDecoration = 'line-through';
-    this.buttons.forEach((button) => button.disabled = true)
+    this.buttons.forEach((button) => (button.disabled = true));
     this.getTreeItems().forEach((child) => child.setDisable());
   }
 
-  public addTreeItems(children: TreeItemLeaf<any>[]) {
+  public addTreeItems(children: TreeItemLeaf<ITreeVisualizable>[]) {
     this.childrenWrapper.replaceChildren(...children);
   }
 
-  public getTreeItems(): TreeItemLeaf<any>[] {
-    return Array.from(this.childrenWrapper.children) as TreeItemLeaf<any>[];
+  public getTreeItems(): TreeItemLeaf<ITreeVisualizable>[] {
+    return Array.from(this.childrenWrapper.children) as TreeItemLeaf<ITreeVisualizable>[];
   }
 }

@@ -11,8 +11,8 @@
 // GNU General Public License for more details.
 
 import { EditorPosition } from 'obsidian';
-import { ITreeVisualizable } from '../view/treeItem';
 import { CacheMatch } from 'src/services/indexingService';
+import { ITreeVisualizable } from '../view/treeItem';
 
 export class Suggestion implements ITreeVisualizable {
   public constructor(public readonly word: string, public readonly occurrences: Occurrence[]) {}
@@ -44,7 +44,7 @@ export class Occurrence implements ITreeVisualizable {
   }
 
   public sortChildren(): void {
-    this.matches.sort((a, b) => a.cacheMatch.rank.codePointAt(0)! - b.cacheMatch.rank.codePointAt(0)!);
+    this.matches.sort((a, b) => (a.cacheMatch.rank.codePointAt(0) ?? 0) - (b.cacheMatch.rank.codePointAt(0) ?? 0));
   }
 }
 

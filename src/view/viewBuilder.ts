@@ -1,11 +1,23 @@
+// Copyright (C) 2023 - shoedler - github.com/shoedler
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
 import { ButtonComponent, Editor, EditorPosition, MarkdownView } from 'obsidian';
 import { CrossbowViewController } from 'src/controllers/viewController';
-import { Suggestion, Occurrence, Match } from 'src/model/suggestion';
+import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
 import { CacheMatch } from 'src/services/indexingService';
 import { CrossbowLoggingService } from 'src/services/loggingService';
 import { TreeItem, TreeItemButtonIcon, TreeItemLeaf } from './treeItem';
 
-const createManualRefreshButton = (parentEl: HTMLElement, onClick: (ev: MouseEvent) => any): ButtonComponent => {
+const createManualRefreshButton = (parentEl: HTMLElement, onClick: (ev: MouseEvent) => void): ButtonComponent => {
   const button = new ButtonComponent(parentEl);
 
   button.buttonEl.id = CrossbowViewController.MANUAL_REFRESH_BUTTON_ID;
@@ -27,7 +39,7 @@ const createSuggestionTreeItem = (suggestion: Suggestion, targetEditor: Editor):
   suggestion.matches.forEach((match) => ranks.add(match.cacheMatch.rank));
 
   const availableMatchRanks = Array.from(ranks)
-    .sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!)
+    .sort((a, b) => (a.codePointAt(0) ?? 0) - (b.codePointAt(0) ?? 0))
     .join('');
 
   suggestionTreeItem.addFlair(availableMatchRanks);
