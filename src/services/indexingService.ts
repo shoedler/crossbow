@@ -29,8 +29,8 @@ export interface CacheMatch extends CacheEntry {
 }
 
 export class CrossbowIndexingService {
-  private readonly crossbowCache: CacheEntryLookup = {};
-  private readonly sourceFileLookup: SourceLookup = {};
+  private crossbowCache: CacheEntryLookup = {};
+  private sourceFileLookup: SourceLookup = {};
 
   public constructor(
     private readonly settingsService: CrossbowSettingsService,
@@ -109,7 +109,7 @@ export class CrossbowIndexingService {
   }
 
   public clearCache(): void {
-    Object.assign(this.crossbowCache, {});
-    Object.assign(this.sourceFileLookup, {});
+    this.crossbowCache = {};
+    this.sourceFileLookup = {};
   }
 }

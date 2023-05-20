@@ -107,6 +107,9 @@ export default class CrossbowPlugin extends Plugin {
   private onFileRename = (file: TAbstractFile, oldPath: string): void => {
     this.loggingService.debugLog(`⚡File renamed. '${file.name}'`);
     this.indexingService.clearCacheFromFile(oldPath);
+
+    // TODO: Verify if we could just use: this.indexingService.indexFile(file as TFile);$
+    //       Could be problematic since file is TAbstractFile
     this.app.metadataCache.trigger('changed', file as TFile, ''); // Trigger metadata change to update cache
   };
 
