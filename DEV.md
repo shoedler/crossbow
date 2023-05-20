@@ -1,17 +1,5 @@
 # Dev Notes
 
-## Roadmap
-
-- [x] General UX Improvement
-- [x] Add "Goto Source" action on suggestions
-- [x] Fix occurrences hint not being updated when new occurrences are found
-
-## Refactors
-
-- [x] Refactor handling / updating of `TreeItem`s. Use a reactive approach instead of manually updating the tree.
-- [ ] Refactor `Editor.getWordLookup()` there has to be a better way of retrieving plain-text from an `Editor` (Without manually removing MD syntax) (Maybe a code mirror plugin?)
-- [ ] Minimally stem words before matching them to cache items
-
 ## Releasing new releases
 
 - Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
