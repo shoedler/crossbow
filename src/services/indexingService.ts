@@ -63,12 +63,15 @@ export class CrossbowIndexingService {
   // 'cache' can be passed in, if this is called from an event handler which already has the cache
   // This will prevent the cache from being retrieved twice
   public indexFile(file: TFile, cache?: CachedMetadata): void {
+    const settings = this.settingsService.getSettings();
+
     if (file.extension !== 'md') return;
+    if (settings.ignoreVaultFolders.some((folderOrPath) => file.path.startsWith(folderOrPath))) return;
     if (cache) this.clearCacheFromFile(file);
 
     const metadata = cache ? cache : app.metadataCache.getFileCache(file);
 
-    if (file.basename.length >= this.settingsService.getSettings().minimumSuggestionWordLength)
+    if (file.basename.length >= settings.minimumSuggestionWordLength)
       this.addOrUpdateCacheEntry({ file, text: file.basename, type: 'File' }, file);
 
     if (metadata) {

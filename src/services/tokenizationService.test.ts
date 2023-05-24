@@ -17,7 +17,7 @@ import { CrossbowTokenizationService, WordLookup } from './tokenizationService';
 
 const proto = CrossbowTokenizationService.prototype;
 
-describe('tokenizationService', () => {
+describe(CrossbowTokenizationService.constructor.name, () => {
   describe(`${CrossbowTokenizationService.redactText.name}()`, () => {
     it('should redact code blocks (```) from a string, leaving spaces in its place', () => {
       const input___ = 'This is a ```\ncode block\n``` string';

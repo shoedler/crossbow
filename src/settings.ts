@@ -13,9 +13,15 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import CrossbowPlugin from './main';
 import { CrossbowPluginSettings, CrossbowSettingsService } from './services/settingsService';
+import { CrossbowUtilsService } from './services/utilsService';
 
 export class CrossbowSettingTab extends PluginSettingTab {
-  constructor(app: App, plugin: CrossbowPlugin, private settingsService: CrossbowSettingsService) {
+  constructor(
+    app: App,
+    plugin: CrossbowPlugin,
+    private settingsService: CrossbowSettingsService,
+    private utilsService: CrossbowUtilsService
+  ) {
     super(app, plugin);
   }
 
@@ -35,18 +41,17 @@ export class CrossbowSettingTab extends PluginSettingTab {
     containerEl.createEl('h3', { text: 'Indexing' });
 
     new Setting(containerEl)
-      .setName('Ignored Words')
+      .setName('Ignored Vault Folders')
       .setDesc(
-        'A case-sensitive, comma separated list of words to ignore when searching for items (Headers, tags). (Whitepaces will be trimmed)'
+        'A case-sensitive, comma separated list of folders (or paths, separated by "/") to ignore when indexing. (Whitepaces around commas will be trimmed)'
       )
       .addTextArea((textArea) => {
-        textArea.setValue(this.settingsService.getSettings().ignoredWordsCaseSensisitve?.join(', ') ?? '').onChange(
-          async (value) =>
-            await this.updateSettingValue(
-              'ignoredWordsCaseSensisitve',
-              value.split(',').map((word) => word.trim())
-            )
-        );
+        textArea
+          .setValue(this.settingsService.getSettings().ignoreVaultFolders?.join(', ') ?? '')
+          .onChange(
+            async (value) =>
+              await this.updateSettingValue('ignoreVaultFolders', this.utilsService.toArrayOfPaths(value))
+          );
 
         textArea.inputEl.setAttr('style', 'height: 10vh; width: 25vw;');
       });
@@ -54,6 +59,22 @@ export class CrossbowSettingTab extends PluginSettingTab {
 
   private addSuggestionsSettings(containerEl: HTMLElement) {
     containerEl.createEl('h3', { text: 'Suggestions' });
+
+    new Setting(containerEl)
+      .setName('Ignored Words')
+      .setDesc(
+        'A case-sensitive, comma separated list of words to ignore when searching for items (Headers, tags). (Whitepaces around commas will be trimmed)'
+      )
+      .addTextArea((textArea) => {
+        textArea
+          .setValue(this.settingsService.getSettings().ignoredWordsCaseSensisitve?.join(', ') ?? '')
+          .onChange(
+            async (value) =>
+              await this.updateSettingValue('ignoredWordsCaseSensisitve', this.utilsService.toWordList(value))
+          );
+
+        textArea.inputEl.setAttr('style', 'height: 10vh; width: 25vw;');
+      });
 
     new Setting(containerEl)
       .setName('Ignore occurrences which start with a lowercase letter')

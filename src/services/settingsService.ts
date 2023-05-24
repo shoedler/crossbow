@@ -19,6 +19,7 @@ export interface CrossbowPluginSettings {
   useLogging: boolean;
   useAutoRefresh: boolean;
   autoRefreshDelayMs: number;
+  ignoreVaultFolders: string[];
 }
 
 export const DEFAULT_SETTINGS: CrossbowPluginSettings = {
@@ -30,6 +31,7 @@ export const DEFAULT_SETTINGS: CrossbowPluginSettings = {
   useLogging: false,
   useAutoRefresh: true,
   autoRefreshDelayMs: 2600,
+  ignoreVaultFolders: [],
 };
 
 export class CrossbowSettingsService {
