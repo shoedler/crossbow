@@ -13,11 +13,11 @@
 import { CachedMetadata, FileStats, HeadingCache, TFile, TFolder, TagCache, Vault } from 'obsidian';
 import { CrossbowIndexingService, SourceCacheEntryLookupMap } from './indexingService';
 import { CrossbowLoggingService } from './loggingService';
-import { CrossbowSettingsService, DEFAULT_SETTINGS } from './settingsService';
+import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './settingsService';
 
 const proto = CrossbowIndexingService.prototype;
 
-describe('indexingService', () => {
+describe(CrossbowIndexingService.constructor.name, () => {
   describe(`${proto.indexFile.name}()`, () => {
     it('should generate cache entries for headings, tags and one for the file itself', () => {
       const fileName = 'testFile';
@@ -73,6 +73,16 @@ describe('indexingService', () => {
 
       service.indexFile(file, metadata);
       expect(Object.keys(service.getCache()[file.path])).toHaveLength(5);
+    });
+
+    it('should not index files which are on the folder ignore list', () => {
+      const file = createFileMock('testFile');
+      file.path = 'testFolder/testFile';
+      const metadata = createMetadataCacheMock();
+      const service = createServiceMock({ ignoreVaultFolders: ['testFolder'] });
+
+      service.indexFile(file, metadata);
+      expect(service.getCache()).toEqual({});
     });
   });
 
@@ -146,8 +156,17 @@ const loggingService = new CrossbowLoggingService(settingsServiceMock);
 
 settingsServiceMock.saveSettings(DEFAULT_SETTINGS);
 
-const createServiceMock = (): CrossbowIndexingService =>
-  new CrossbowIndexingService(settingsServiceMock, loggingService);
+const createServiceMock = (overrideSettings?: Partial<CrossbowPluginSettings>): CrossbowIndexingService => {
+  if (overrideSettings) {
+    const settings = settingsServiceMock.getSettings();
+    Object.entries(overrideSettings).forEach(([key, value]) => {
+      // @ts-ignore
+      settings[key] = value;
+    });
+    settingsServiceMock.saveSettings(settings);
+  }
+  return new CrossbowIndexingService(settingsServiceMock, loggingService);
+};
 
 const createFileMock = (fileName: string): TFile => ({
   basename: fileName,

@@ -18,6 +18,7 @@ import { CrossbowLoggingService } from './services/loggingService';
 import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './services/settingsService';
 import { CrossbowSuggestionsService } from './services/suggestionsService';
 import { CrossbowTokenizationService } from './services/tokenizationService';
+import { CrossbowUtilsService } from './services/utilsService';
 import { CrossbowSettingTab } from './settings';
 import { registerTreeItemElements } from './view/treeItem';
 import { CrossbowView } from './view/view';
@@ -28,6 +29,8 @@ export default class CrossbowPlugin extends Plugin {
   private readonly indexingService: CrossbowIndexingService;
   private readonly tokenizationService: CrossbowTokenizationService;
   private readonly suggestionsService: CrossbowSuggestionsService;
+  private readonly utilsService: CrossbowUtilsService;
+
   private readonly viewController: CrossbowViewController;
 
   private currentFile: TFile;
@@ -42,6 +45,7 @@ export default class CrossbowPlugin extends Plugin {
     this.indexingService = new CrossbowIndexingService(this.settingsService, this.loggingService);
     this.tokenizationService = new CrossbowTokenizationService();
     this.suggestionsService = new CrossbowSuggestionsService(this.settingsService, this.indexingService);
+    this.utilsService = new CrossbowUtilsService();
 
     this.viewController = new CrossbowViewController(this.settingsService);
   }
@@ -66,7 +70,7 @@ export default class CrossbowPlugin extends Plugin {
     });
 
     // Settings-tab to configure crossbow
-    this.addSettingTab(new CrossbowSettingTab(this.app, this, this.settingsService));
+    this.addSettingTab(new CrossbowSettingTab(this.app, this, this.settingsService, this.utilsService));
 
     // Register event handlers
     this.registerEvent(this.app.workspace.on('file-open', this.onFileOpen));
