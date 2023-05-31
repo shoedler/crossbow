@@ -13,12 +13,14 @@
 import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
 import { CrossbowViewController } from 'src/controllers/viewController';
 import { Suggestion } from 'src/model/suggestion';
+import Component from './components/Component.svelte';
 import { TreeItem, type ITreeVisualizable } from './treeItem';
 import { viewBuilder } from './viewBuilder';
 
 export class CrossbowView extends ItemView {
   private readonly treeEl: HTMLElement;
   private readonly controlsEl: HTMLElement;
+  private component: Component;
 
   constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => void) {
     super(leaf);
@@ -27,6 +29,19 @@ export class CrossbowView extends ItemView {
 
     viewBuilder.createManualRefreshButton(this.controlsEl, this.onManualRefreshButtonClick);
     this.treeEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
+  }
+
+  async onOpen(): Promise<void> {
+    this.component = new Component({
+      target: this.contentEl,
+      props: {
+        variable: 1,
+      },
+    });
+  }
+
+  async onClose(): Promise<void> {
+    this.component.$destroy();
   }
 
   public static viewType = 'crossbow-toolbar';
