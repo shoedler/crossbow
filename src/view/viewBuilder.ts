@@ -10,10 +10,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { ButtonComponent, Editor, EditorPosition, MarkdownView } from 'obsidian';
+import { ButtonComponent, Editor, MarkdownView, type EditorPosition } from 'obsidian';
 import { CrossbowViewController } from 'src/controllers/viewController';
 import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
-import { CacheMatch } from 'src/services/indexingService';
+import type { CacheMatch } from 'src/services/indexingService';
 import { CrossbowLoggingService } from 'src/services/loggingService';
 import { TreeItem, TreeItemButtonIcon, TreeItemLeaf } from './treeItem';
 

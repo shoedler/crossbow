@@ -13,7 +13,7 @@
 import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
 import { CrossbowViewController } from 'src/controllers/viewController';
 import { Suggestion } from 'src/model/suggestion';
-import { ITreeVisualizable, TreeItem } from './treeItem';
+import { TreeItem, type ITreeVisualizable } from './treeItem';
 import { viewBuilder } from './viewBuilder';
 
 export class CrossbowView extends ItemView {

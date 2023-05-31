@@ -10,12 +10,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { App, CachedMetadata, MarkdownView, Plugin, PluginManifest, TAbstractFile, TFile } from 'obsidian';
+import { App, MarkdownView, Plugin, TAbstractFile, TFile, type CachedMetadata, type PluginManifest } from 'obsidian';
 import { CrossbowViewController } from './controllers/viewController';
 import { registerCrossbowIcons } from './icons';
 import { CrossbowIndexingService } from './services/indexingService';
 import { CrossbowLoggingService } from './services/loggingService';
-import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './services/settingsService';
+import { CrossbowSettingsService, DEFAULT_SETTINGS, type CrossbowPluginSettings } from './services/settingsService';
 import { CrossbowSuggestionsService } from './services/suggestionsService';
 import { CrossbowTokenizationService } from './services/tokenizationService';
 import { CrossbowUtilsService } from './services/utilsService';
