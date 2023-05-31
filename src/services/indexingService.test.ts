@@ -10,10 +10,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { CachedMetadata, FileStats, HeadingCache, TFile, TFolder, TagCache, Vault } from 'obsidian';
-import { CrossbowIndexingService, SourceCacheEntryLookupMap } from './indexingService';
-import { CrossbowLoggingService } from './loggingService';
-import { CrossbowPluginSettings, CrossbowSettingsService, DEFAULT_SETTINGS } from './settingsService';
+import type { TFile, FileStats, Vault, TFolder, CachedMetadata, HeadingCache, TagCache } from "obsidian";
+import { CrossbowIndexingService, type SourceCacheEntryLookupMap } from "./indexingService";
+import { CrossbowLoggingService } from "./loggingService";
+import { CrossbowSettingsService, DEFAULT_SETTINGS, type CrossbowPluginSettings } from "./settingsService";
 
 const proto = CrossbowIndexingService.prototype;
 

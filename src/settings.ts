@@ -12,7 +12,7 @@
 
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import CrossbowPlugin from './main';
-import { CrossbowPluginSettings, CrossbowSettingsService } from './services/settingsService';
+import type { CrossbowPluginSettings, CrossbowSettingsService } from './services/settingsService';
 import { CrossbowUtilsService } from './services/utilsService';
 
 export class CrossbowSettingTab extends PluginSettingTab {

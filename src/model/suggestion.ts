@@ -10,9 +10,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { EditorPosition } from 'obsidian';
-import { CacheMatch } from 'src/services/indexingService';
-import { ITreeVisualizable } from '../view/treeItem';
+import type { EditorPosition } from "obsidian";
+import type { CacheMatch } from "src/services/indexingService";
+import type { ITreeVisualizable } from "src/view/treeItem";
 
 export class Suggestion implements ITreeVisualizable {
   public constructor(public readonly word: string, public readonly occurrences: Occurrence[]) {}

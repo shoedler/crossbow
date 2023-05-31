@@ -10,10 +10,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-/* eslint-disable no-useless-escape */ // Reson: `testFile`
+import type { Editor } from 'obsidian';
+import { CrossbowTokenizationService, type WordLookup } from './tokenizationService';
 
-import { Editor } from 'obsidian';
-import { CrossbowTokenizationService, WordLookup } from './tokenizationService';
+/* eslint-disable no-useless-escape */ // Reson: `testFile`
 
 const proto = CrossbowTokenizationService.prototype;
 

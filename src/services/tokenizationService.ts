@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { Editor, EditorPosition } from 'obsidian';
+import type { Editor, EditorPosition } from 'obsidian';
 
 export type WordLookup = { [key: string]: EditorPosition[] };
 

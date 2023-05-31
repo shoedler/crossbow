@@ -10,11 +10,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-import { CacheItem, CachedMetadata, TAbstractFile, TFile, Vault } from 'obsidian';
-import { CrossbowLoggingService } from './loggingService';
-import { CrossbowSettingsService } from './settingsService';
+import type { CacheItem, CachedMetadata, TAbstractFile, TFile, Vault } from 'obsidian';
+import type { CrossbowLoggingService } from './loggingService';
+import type { CrossbowSettingsService } from './settingsService';
 
 type CacheEntryLookup = { [key: string]: CacheEntry };
+
 export type SourceCacheEntryLookupMap = { [key: TFile['path']]: CacheEntryLookup };
 
 export interface CacheEntry {
