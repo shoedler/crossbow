@@ -7,15 +7,15 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 import { CrossbowSettingsService } from './settingsService';
 
 export class CrossbowLoggingService {
-  public constructor(private readonly settingsService: CrossbowSettingsService) {}
-
   private static LOGGER_PREFIX = '🏹: ';
+
+  public constructor(private readonly settingsService: CrossbowSettingsService) {}
 
   public debugLog(message: string): void {
     this.settingsService.getSettings().useLogging && console.log(CrossbowLoggingService.LOGGER_PREFIX + message);

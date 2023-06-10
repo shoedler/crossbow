@@ -7,7 +7,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 import { Editor, EditorPosition } from 'obsidian';
@@ -31,8 +31,6 @@ const MARKDOWN_CODE_BLOCK_REGEX = /```[\s\S]+?```/g;
 // const MARKDOWN_STRIKETROUGH_REGEX =      /~(.*?)~/g;
 
 export class CrossbowTokenizationService {
-  public constructor() {}
-
   private readonly SKIP_REGEX = /\s/;
 
   public getWordLookupFromEditor(targetEditor: Editor): WordLookup {
