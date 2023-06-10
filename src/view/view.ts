@@ -10,26 +10,27 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
-import { Editor, ItemView, WorkspaceLeaf } from 'obsidian';
+import { ButtonComponent, Editor, ItemView, WorkspaceLeaf } from 'obsidian';
 import { CrossbowViewController } from 'src/controllers/viewController';
 import { Suggestion } from 'src/model/suggestion';
-import { ITreeVisualizable, TreeItem } from './treeItem';
-import { viewBuilder } from './viewBuilder';
+import { Tree } from './tree/tree';
 
 export class CrossbowView extends ItemView {
-  private readonly treeEl: HTMLElement;
-  private readonly controlsEl: HTMLElement;
+  public static viewType = 'crossbow-toolbar';
+  private readonly controlsContainer: HTMLDivElement;
+  private readonly manualRefreshButton: ButtonComponent;
+  private readonly treeContainer: HTMLDivElement;
+  private tree: Tree | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly onManualRefreshButtonClick: (evt: MouseEvent) => void) {
     super(leaf);
-    this.controlsEl = this.contentEl.createDiv({ cls: 'cb-view-controls' });
-    this.treeEl = this.contentEl.createDiv({ cls: 'cb-view-tree' });
 
-    viewBuilder.createManualRefreshButton(this.controlsEl, this.onManualRefreshButtonClick);
-    this.treeEl.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
+    this.controlsContainer = this.contentEl.createDiv({ cls: 'cb-view-controls' });
+    this.treeContainer = this.contentEl.createDiv({ cls: 'cb-view-tree' });
+    this.treeContainer.createSpan({ text: 'Open a note to run crossbow', cls: 'cb-view-empty' });
+
+    this.manualRefreshButton = this.createManualRefreshButton(this.controlsContainer, this.onManualRefreshButtonClick);
   }
-
-  public static viewType = 'crossbow-toolbar';
 
   public getViewType(): string {
     return CrossbowView.viewType;
@@ -49,62 +50,39 @@ export class CrossbowView extends ItemView {
   }
 
   public clear(): void {
-    this.treeEl.empty();
+    this.tree?.remove();
+    this.tree = null;
   }
 
   public update(suggestions: Suggestion[], targetEditor: Editor, showManualRefreshButton: boolean): void {
-    showManualRefreshButton ? this.getManualRefreshButton().show() : this.getManualRefreshButton().hide();
+    showManualRefreshButton ? this.manualRefreshButton.buttonEl.show() : this.manualRefreshButton.buttonEl.hide();
 
-    this.addOrUpdateSuggestions(suggestions, targetEditor);
+    if (!this.tree) {
+      this.createTree(targetEditor);
+    } else if (this.tree.targetEditor !== targetEditor) {
+      this.tree.remove();
+      this.createTree(targetEditor);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    this.tree!.update(suggestions);
   }
 
-  public addOrUpdateSuggestions(suggestions: Suggestion[], targetEditor: Editor): void {
-    const currentSuggestionTreeItems = this.getCurrentSuggestions();
-
-    suggestions.forEach((suggestion) => {
-      // Find if this Suggestion already exists
-      const index = currentSuggestionTreeItems.findIndex((item) => item.hash === suggestion.hash);
-      const existingSuggestion = index !== -1 ? currentSuggestionTreeItems.splice(index, 1)[0] : undefined;
-
-      const suggestionTreeItem = viewBuilder.createSuggestionTreeItem(suggestion, targetEditor);
-
-      if (existingSuggestion) {
-        const expandedOccurrencesHashes = existingSuggestion
-          .getTreeItems()
-          .filter((item) => !(item as TreeItem<ITreeVisualizable>).isCollapsed())
-          .map((item) => item.hash);
-
-        suggestionTreeItem.getTreeItems().forEach((occurrence) => {
-          // Toggle expanded state, if it was expanded before
-          if (expandedOccurrencesHashes.includes(occurrence.hash)) {
-            (occurrence as TreeItem<ITreeVisualizable>).expand();
-          }
-        });
-
-        // Insert / append the new suggestion, depending on whether it already existed
-        this.treeEl.insertAfter(suggestionTreeItem, existingSuggestion);
-        existingSuggestion.isCollapsed() ? suggestionTreeItem.collapse() : suggestionTreeItem.expand();
-        existingSuggestion.remove();
-      } else {
-        // Insert the new suggestion at the correct position. They are sorted by localeCompare of their 'hash' property
-        const index = currentSuggestionTreeItems.findIndex((item) => suggestion.hash.localeCompare(item.hash) < 0);
-        if (index === -1) {
-          this.treeEl.appendChild(suggestionTreeItem);
-        } else {
-          this.treeEl.insertBefore(suggestionTreeItem, currentSuggestionTreeItems[index]);
-        }
-      }
-    });
-
-    // Now, we're left with the existing suggestions that we need to remove
-    currentSuggestionTreeItems.forEach((item) => item.remove());
+  private createTree(targetEditor: Editor) {
+    this.tree = new Tree(targetEditor);
+    this.treeContainer.empty();
+    this.treeContainer.appendChild(this.tree);
   }
 
-  private getManualRefreshButton(): HTMLElement {
-    return this.controlsEl.querySelector('#' + CrossbowViewController.MANUAL_REFRESH_BUTTON_ID) as HTMLElement;
-  }
+  private createManualRefreshButton(parentEl: HTMLElement, onClick: (ev: MouseEvent) => void): ButtonComponent {
+    const button = new ButtonComponent(parentEl);
 
-  private getCurrentSuggestions(): TreeItem<Suggestion>[] {
-    return this.treeEl.children.length > 0 ? (Array.from(this.treeEl.children) as TreeItem<Suggestion>[]) : [];
+    button.buttonEl.id = CrossbowViewController.MANUAL_REFRESH_BUTTON_ID;
+    button.setTooltip('Refresh suggestions');
+    button.setIcon('lucide-rotate-cw');
+    button.setClass('cb-tree-item-button');
+    button.onClick(onClick);
+
+    return button;
   }
 }

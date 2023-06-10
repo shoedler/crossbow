@@ -25,7 +25,8 @@ const MARKDOWN_LATEX_BLOCK_REGEX = /\$\$([^$]+)\$\$/g;
 const MARKDOWN_LATEX_INLINE_REGEX = /\$([^$]+)\$/g;
 const MARKDOWN_LINKS_AND_IMAGES_REGEX = /!?\[([^\]]+)\]\((?:<.*>)?\s*([^\s)]+)\s*\)/gm;
 const MARKDOWN_CODE_BLOCK_REGEX = /```[\s\S]+?```/g;
-// const MARKDOWN_ASTERISK_EMPHASIS_REGEX = /([\*]+)(\S)(.*?\S)??\1/g;
+const MARKDOWN_ASTERISK_EMPHASIS_REGEX = /([*]+)(\S)(.*?\S)??(\1)/g; // g1 = *, g2 = first char, g3 = middle, g4 = *
+
 // const MARKDOWN_LODASH_EMPHASIS_REGEX =   /(^|\W)([_]+)(\S)(.*?\S)??\2($|\W)/g;
 // const MARKDOWN_CODE_INLINE_REGEX =       /`(.+?)`/g;
 // const MARKDOWN_STRIKETROUGH_REGEX =      /~(.*?)~/g;
@@ -61,20 +62,23 @@ export class CrossbowTokenizationService {
     return wordLookup;
   }
 
-  public static redactText(text: string): string {
-    const muteString = (str: string): string => str.replace(/[^\r\n]+/g, (m) => ' '.repeat(m.length));
+  public static muteString = (str: string): string => str.replace(/[^\r\n]+/g, (m) => ' '.repeat(m.length));
 
+  public static muteWord = (word: string): string => ' '.repeat(word.length);
+
+  public static redactText(text: string): string {
     // Order matters here
     return text
-      .replace(MARKDOWN_CODE_BLOCK_REGEX, (m) => muteString(m))
-      .replace(MARKDOWN_LATEX_BLOCK_REGEX, (m) => muteString(m))
-      .replace(MARKDOWN_LATEX_INLINE_REGEX, (m) => muteString(m))
-      .replace(MARKDOWN_LINKS_AND_IMAGES_REGEX, (m) => muteString(m))
-      .replace(OBSIDIAN_METADATA_REGEX, (m) => muteString(m))
-      .replace(OBSIDIAN_TAG_REGEX, (m) => muteString(m))
-      .replace(OBSIDIAN_LINKS_REGEX, (m) => muteString(m))
-      .replace(HTML_COMMENT_REGEX, (m) => muteString(m))
-      .replace(HTML_TAG_REGEX, (m) => muteString(m));
+      .replace(MARKDOWN_ASTERISK_EMPHASIS_REGEX, (m, g1, g2, g3) => this.muteWord(g1) + g2 + g3 + this.muteWord(g1))
+      .replace(MARKDOWN_CODE_BLOCK_REGEX, (m) => this.muteString(m))
+      .replace(MARKDOWN_LATEX_BLOCK_REGEX, (m) => this.muteString(m))
+      .replace(MARKDOWN_LATEX_INLINE_REGEX, (m) => this.muteString(m))
+      .replace(MARKDOWN_LINKS_AND_IMAGES_REGEX, (m) => this.muteString(m))
+      .replace(OBSIDIAN_METADATA_REGEX, (m) => this.muteString(m))
+      .replace(OBSIDIAN_TAG_REGEX, (m) => this.muteString(m))
+      .replace(OBSIDIAN_LINKS_REGEX, (m) => this.muteString(m))
+      .replace(HTML_COMMENT_REGEX, (m) => this.muteString(m))
+      .replace(HTML_TAG_REGEX, (m) => this.muteString(m));
   }
 
   public static cleanWord(word: string): string {

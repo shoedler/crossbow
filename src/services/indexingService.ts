@@ -37,11 +37,6 @@ export class CrossbowIndexingService {
     private readonly loggingService: CrossbowLoggingService
   ) {}
 
-  private addOrUpdateCacheEntry(entry: CacheEntry, source: TFile): void {
-    this.crossbowCache[source.path] = this.crossbowCache[source.path] ? this.crossbowCache[source.path] : {};
-    this.crossbowCache[source.path][entry.text] = entry;
-  }
-
   public getCache(): SourceCacheEntryLookupMap {
     return this.crossbowCache;
   }
@@ -105,5 +100,10 @@ export class CrossbowIndexingService {
 
   public clearCache(): void {
     this.crossbowCache = {};
+  }
+
+  private addOrUpdateCacheEntry(entry: CacheEntry, source: TFile): void {
+    this.crossbowCache[source.path] = this.crossbowCache[source.path] ? this.crossbowCache[source.path] : {};
+    this.crossbowCache[source.path][entry.text] = entry;
   }
 }

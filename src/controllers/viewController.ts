@@ -44,10 +44,6 @@ export class CrossbowViewController {
     this.getCrossbowView()?.unload();
   }
 
-  private getCrossbowView(): CrossbowView | undefined {
-    return app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
-  }
-
   public addOrUpdateSuggestions(suggestions: Suggestion[], targetEditor: Editor, fileHasChanged: boolean): void {
     const view = this.getCrossbowView();
 
@@ -56,5 +52,9 @@ export class CrossbowViewController {
 
     const showManualRefreshButton = !this.settingsService.getSettings().useAutoRefresh;
     view.update(suggestions, targetEditor, showManualRefreshButton);
+  }
+
+  private getCrossbowView(): CrossbowView | undefined {
+    return app.workspace.getLeavesOfType(CrossbowView.viewType)[0]?.view as CrossbowView;
   }
 }

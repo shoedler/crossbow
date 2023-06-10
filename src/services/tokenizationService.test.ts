@@ -163,11 +163,11 @@ const expectedFromTestFile = {
   ],
   '9': [{ line: 0, ch: 3331 }],
   '51': [{ line: 0, ch: 1916 }],
-  '93': [{ line: 0, ch: 3784 }],
+  '93': [{ line: 0, ch: 3786 }],
   '185': [{ line: 0, ch: 3754 }],
   '1249': [{ line: 0, ch: 3041 }],
   '1851': [{ line: 0, ch: 3769 }],
-  '12494': [{ line: 0, ch: 3063 }],
+  '12494': [{ line: 0, ch: 3065 }],
   '12589': [{ line: 0, ch: 3186 }],
   '34567': [{ line: 0, ch: 3142 }],
   '55555': [{ line: 0, ch: 3098 }],
@@ -192,7 +192,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 621 },
     { line: 0, ch: 1801 },
     { line: 0, ch: 2340 },
-    { line: 0, ch: 3021 },
+    { line: 0, ch: 3023 },
   ],
   Schuhe: [
     { line: 0, ch: 151 },
@@ -216,7 +216,7 @@ const expectedFromTestFile = {
   zur: [{ line: 0, ch: 200 }],
   Auswahl: [{ line: 0, ch: 204 }],
   Objekte: [
-    { line: 0, ch: 217 },
+    { line: 0, ch: 219 },
     { line: 0, ch: 233 },
   ],
   Die: [
@@ -236,7 +236,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 1316 },
     { line: 0, ch: 1845 },
   ],
-  statistische: [{ line: 0, ch: 252 }],
+  statistische: [{ line: 0, ch: 254 }],
   bezeichnet: [{ line: 0, ch: 277 }],
   Grundgesamtheit: [{ line: 0, ch: 292 }],
   Menge: [
@@ -400,7 +400,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 1012 },
     { line: 0, ch: 2250 },
   ],
-  diskretes: [{ line: 0, ch: 832 }],
+  diskretes: [{ line: 0, ch: 834 }],
   ist: [
     { line: 0, ch: 854 },
     { line: 0, ch: 1037 },
@@ -448,7 +448,7 @@ const expectedFromTestFile = {
   ],
   Zählvariablen: [{ line: 0, ch: 975 }],
   stets: [{ line: 0, ch: 995 }],
-  stetiges: [{ line: 0, ch: 1016 }],
+  stetiges: [{ line: 0, ch: 1018 }],
   hingegen: [{ line: 0, ch: 1041 }],
   dadurch: [{ line: 0, ch: 1050 }],
   gekennzeichnet: [{ line: 0, ch: 1058 }],
@@ -535,7 +535,7 @@ const expectedFromTestFile = {
   OG: [{ line: 0, ch: 1572 }],
   Wurzelskala: [{ line: 0, ch: 1583 }],
   Nominalskala: [
-    { line: 0, ch: 1603 },
+    { line: 0, ch: 1605 },
     { line: 0, ch: 1662 },
   ],
   Rangordnung: [
@@ -552,7 +552,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 1724 },
     { line: 0, ch: 1978 },
     { line: 0, ch: 2302 },
-    { line: 0, ch: 3808 },
+    { line: 0, ch: 3810 },
     { line: 0, ch: 4114 },
   ],
   Siehe: [
@@ -603,7 +603,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 2135 },
     { line: 0, ch: 4542 },
   ],
-  Abstand: [{ line: 0, ch: 2147 }],
+  Abstand: [{ line: 0, ch: 2149 }],
   zw: [{ line: 0, ch: 2159 }],
   zwei: [{ line: 0, ch: 2163 }],
   Punkten: [{ line: 0, ch: 2168 }],
@@ -672,7 +672,7 @@ const expectedFromTestFile = {
   ],
   D: [{ line: 0, ch: 3037 }],
   xquer0: [{ line: 0, ch: 3051 }],
-  Problem: [{ line: 0, ch: 3080 }],
+  Problem: [{ line: 0, ch: 3082 }],
   D1: [
     { line: 0, ch: 3093 },
     { line: 0, ch: 4210 },
@@ -716,7 +716,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 3743 },
   ],
   Halbierung: [{ line: 0, ch: 3516 }],
-  Biespiel: [{ line: 0, ch: 3718 }],
+  Biespiel: [{ line: 0, ch: 3719 }],
   Berechne: [{ line: 0, ch: 3730 }],
   den: [{ line: 0, ch: 3739 }],
   Werten: [{ line: 0, ch: 3758 }],

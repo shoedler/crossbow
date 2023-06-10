@@ -11,7 +11,7 @@
 // GNU General Public License for more details.
 
 import { TFile } from 'obsidian';
-import { Match, Occurrence, Suggestion } from 'src/model/suggestion';
+import { Suggestion } from 'src/model/suggestion';
 import { CacheMatch, CrossbowIndexingService } from './indexingService';
 import { CrossbowSettingsService } from './settingsService';
 import { WordLookup } from './tokenizationService';
@@ -94,14 +94,12 @@ export class CrossbowSuggestionsService {
       }
 
       if (matchSet.size > 0) {
-        const matches = Array.from(matchSet).map((m) => new Match(m));
-        const occurrences = editorPositions.map((p) => new Occurrence(p, matches));
-        result.push(new Suggestion(word, occurrences));
+        result.push(new Suggestion(word, matchSet, editorPositions));
       }
     }
 
     // Sort the result
-    result.sort((a, b) => a.hash.localeCompare(b.hash)).forEach((suggestion) => suggestion.sortChildren());
+    result.sort((a, b) => a.uid.localeCompare(b.uid)).forEach((suggestion) => suggestion.sortChildren());
 
     // Remove ignored words from the result
     return this.removeIgnoredWords(result);
