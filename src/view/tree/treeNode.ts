@@ -117,17 +117,7 @@ export class TreeNode<TData extends ITreeNodeData> extends HTMLElement {
       this.mainWrapper.addEventListener('click', () => (this.isCollapsed() ? this.expand() : this.collapse()));
 
       // lazy-create children nodes
-      const children = this.value.children as ITreeNodeData[];
-      const childrenWrapper = this.childrenWrapper as HTMLDivElement;
-
-      this.mainWrapper.addEventListener(
-        'click',
-        () => {
-          const nodes = children.map((child) => new TreeNode(child, this.manager));
-          childrenWrapper.replaceChildren(...nodes);
-        },
-        { once: true }
-      );
+      this.mainWrapper.addEventListener('click', () => this.generateChildren(), { once: true });
     }
 
     if (this.value.actions.length > 0) {
@@ -153,6 +143,14 @@ export class TreeNode<TData extends ITreeNodeData> extends HTMLElement {
       targetEditor: this.manager.targetEditor,
       self: this,
     };
+  }
+
+  public generateChildren(): void {
+    if (!this.childrenWrapper || !this.value.children) return;
+    if (this.childrenWrapper.children.length > 0) return;
+
+    const nodes = this.value.children.map((child) => new TreeNode(child, this.manager));
+    this.childrenWrapper.replaceChildren(...nodes);
   }
 
   public isCollapsed() {

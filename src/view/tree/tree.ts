@@ -41,8 +41,10 @@ export class Tree extends HTMLElement implements ITreeContextProvider {
 
   public update<T extends ITreeNodeData>(data: T[]): void {
     const oldNodes = this.getChildTreeNodes();
-    const newNodes = data.map((d) => new TreeNode<T>(d, this));
-    const batch = this.treeUpdater.update(newNodes, oldNodes);
+    const batch = this.treeUpdater.update(
+      data.map((d) => new TreeNode(d, this)),
+      oldNodes
+    );
 
     requestAnimationFrame(() => {
       batch.forEach((update) => update(this));

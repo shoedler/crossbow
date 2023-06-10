@@ -37,21 +37,19 @@ export class TreeUpdater {
             const child = newNode.childTreeNodes.find((child) => equals(child.value, expandedChild.value));
             if (child) {
               child.expand();
+              child.generateChildren();
             }
           });
 
         // Replace existing node with new node
         updates.push((container) => {
-          console.log(
-            'replacing',
-            existingNode.value.constructor.name,
-            existingNode.value.uid,
-            'with',
-            newNode.value.constructor.name,
-            newNode.value.uid
-          );
           container.insertAfter(newNode, existingNode);
-          existingNode.isCollapsed() ? newNode.collapse() : newNode.expand();
+
+          if (!existingNode.isCollapsed()) {
+            newNode.expand();
+            newNode.generateChildren();
+          }
+
           existingNode.remove();
         });
       } else {
@@ -59,7 +57,6 @@ export class TreeUpdater {
         const insertionIndex = oldNodes.findIndex((oldNode) => newNode.value.uid.localeCompare(oldNode.value.uid) < 0);
 
         updates.push((container) => {
-          console.log('inserting', newNode.value.constructor.name, newNode.value.uid);
           if (insertionIndex === -1) {
             container.appendChild(newNode);
           } else {
@@ -72,7 +69,6 @@ export class TreeUpdater {
     // Now, we're left with the existing suggestions that we need to remove
     updates.push((container) => {
       oldNodes.forEach((item) => {
-        console.log('removing', item.value.constructor.name, item.value.uid);
         item.remove();
       });
     });

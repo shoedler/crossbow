@@ -97,7 +97,17 @@ export default class CrossbowPlugin extends Plugin {
   }
 
   public runWithoutCacheUpdate(fileHasChanged: boolean): void {
-    const targetEditor = this.app.workspace.activeEditor?.editor;
+    // Get editor of current file
+    const fileView = app.workspace
+      .getLeavesOfType('markdown')
+      .find((leaf) => leaf.view instanceof MarkdownView && leaf.view.file === this.currentFile)?.view as
+      | MarkdownView
+      | undefined;
+
+    if (!fileView) return;
+
+    const targetEditor = fileView.editor;
+
     if (!targetEditor) return;
 
     const wordLookup = this.tokenizationService.getWordLookupFromEditor(targetEditor);
