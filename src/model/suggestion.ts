@@ -53,11 +53,10 @@ export class Suggestion implements ITreeNodeData {
     return this.word;
   }
 
-  public constructor(word: string, matchSet: Set<CacheMatch>, matchOccurrences: EditorPosition[]) {
+  public constructor(word: string, matches: CacheMatch[], matchOccurrences: EditorPosition[]) {
     this.word = word;
     this.children = matchOccurrences.map((p) => {
       const matchOccurrenceEnd = { ch: p.ch + word.length, line: p.line } as EditorPosition;
-      const matches = Array.from(matchSet);
       return new Occurrence(this, p, matchOccurrenceEnd, matches);
     });
   }

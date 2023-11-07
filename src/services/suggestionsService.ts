@@ -35,7 +35,7 @@ export class CrossbowSuggestionsService {
       const [word, editorPositions] = wordEntries[i];
       const lowercaseWord = word.toLowerCase();
 
-      const matchSet: Set<CacheMatch> = new Set();
+      const matches: CacheMatch[] = [];
 
       // Find matches in the cache
       const cacheValues = Object.values(cache);
@@ -48,15 +48,15 @@ export class CrossbowSuggestionsService {
           const [cacheKey, cacheValue] = cacheEntries[k];
           const lowercaseCacheKey = cacheKey.toLowerCase();
 
-          if (matchSet.size >= 100) continue;
+          if (matches.length >= 300) continue;
 
           // If reference is in the same file, and we don't want to suggest references in the same file, skip
-          if (!this.settingsService.getSettings().suggestInSameFile && cacheValue.file === currentFile) continue;
+          if (!settings.suggestInSameFile && cacheValue.file === currentFile) continue;
 
           // If we have a case-sensitive exact match, we always add it, even if it does not satisfy the other filters. Say we have a chapter with a heading 'C' (eg. the programming language)
           // We want to match a word 'C' in the current editor, even if it is too short or is on the ignore list.
           if (cacheKey === word) {
-            matchSet.add({ ...cacheValue, rank: '🏆' });
+            matches.push({ ...cacheValue, rank: '🏆' });
             continue;
           }
 
@@ -78,23 +78,23 @@ export class CrossbowSuggestionsService {
 
           // If the word is a case-insensitive exact match, add as a very good suggestion
           if (lowercaseCacheKey === lowercaseWord) {
-            matchSet.add({ ...cacheValue, rank: '🥇' });
+            matches.push({ ...cacheValue, rank: '🥇' });
             continue;
           }
 
           // If the lengths differ too much, add as not-very-good suggestion
           if ((1 / cacheKey.length) * word.length <= 0.2) {
-            matchSet.add({ ...cacheValue, rank: '🥉' });
+            matches.push({ ...cacheValue, rank: '🥉' });
             continue;
           }
 
           // Else, add as a mediocre suggestion
-          matchSet.add({ ...cacheValue, rank: '🥈' });
+          matches.push({ ...cacheValue, rank: '🥈' });
         }
       }
 
-      if (matchSet.size > 0) {
-        result.push(new Suggestion(word, matchSet, editorPositions));
+      if (matches.length > 0) {
+        result.push(new Suggestion(word, matches, editorPositions));
       }
     }
 
