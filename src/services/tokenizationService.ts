@@ -50,12 +50,15 @@ export class CrossbowTokenizationService {
 
         while (plainText[i] && !plainText[i].match(this.SKIP_REGEX)) word += plainText[i++];
 
-        word = CrossbowTokenizationService.cleanWord(word);
+        const cleanWord = CrossbowTokenizationService.cleanWord(word);
+        if (cleanWord.length <= 0) continue;
 
-        if (word.length <= 0) continue;
+        // Offset the word start pos if the 'cleaning' of the word removed characters
+        const wordStartOffset = word.indexOf(cleanWord[0]);
+        if (wordStartOffset > 0) pos.ch += wordStartOffset;
 
-        if (word in wordLookup) wordLookup[word].push(pos);
-        else wordLookup[word] = [pos];
+        if (cleanWord in wordLookup) wordLookup[cleanWord].push(pos);
+        else wordLookup[cleanWord] = [pos];
       }
     }
 

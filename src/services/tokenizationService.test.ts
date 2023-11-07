@@ -12,6 +12,7 @@
 
 /* eslint-disable no-useless-escape */ // Reson: `testFile`
 
+import { writeFileSync } from 'fs';
 import { Editor } from 'obsidian';
 import { CrossbowTokenizationService, WordLookup } from './tokenizationService';
 
@@ -135,16 +136,24 @@ describe(CrossbowTokenizationService.constructor.name, () => {
       const editor = mockEditor(testFile);
       const service = new CrossbowTokenizationService();
       const actual = service.getWordLookupFromEditor(editor);
+
+      // Dump actual and expected to files for debugging
+      writeFileSync('src/services/tokenizationService.test.actual.dump.json', JSON.stringify(actual, null, 0));
+      writeFileSync(
+        'src/services/tokenizationService.test.expected.dump.json',
+        JSON.stringify(expectedFromTestFile, null, 0)
+      );
+
       expect(actual).toEqual(expectedFromTestFile);
     });
   });
 });
 
 const expectedFromTestFile = {
-  '0': [{ line: 0, ch: 2268 }],
+  '0': [{ line: 0, ch: 2269 }],
   '1': [
-    { line: 0, ch: 1827 },
-    { line: 0, ch: 3327 },
+    { line: 0, ch: 1828 },
+    { line: 0, ch: 3328 },
     { line: 0, ch: 4554 },
   ],
   '2': [{ line: 0, ch: 3779 }],
@@ -166,8 +175,8 @@ const expectedFromTestFile = {
   '93': [{ line: 0, ch: 3786 }],
   '185': [{ line: 0, ch: 3754 }],
   '1249': [{ line: 0, ch: 3041 }],
-  '1851': [{ line: 0, ch: 3769 }],
-  '12494': [{ line: 0, ch: 3065 }],
+  '1851': [{ line: 0, ch: 3770 }],
+  '12494': [{ line: 0, ch: 3066 }],
   '12589': [{ line: 0, ch: 3186 }],
   '34567': [{ line: 0, ch: 3142 }],
   '55555': [{ line: 0, ch: 3098 }],
@@ -206,7 +215,7 @@ const expectedFromTestFile = {
   Kriterien: [{ line: 0, ch: 173 }],
   Man: [
     { line: 0, ch: 184 },
-    { line: 0, ch: 2103 },
+    { line: 0, ch: 2104 },
   ],
   hat: [
     { line: 0, ch: 188 },
@@ -284,7 +293,7 @@ const expectedFromTestFile = {
   Frage: [{ line: 0, ch: 378 }],
   kommen: [{ line: 0, ch: 384 }],
   Im: [
-    { line: 0, ch: 392 },
+    { line: 0, ch: 393 },
     { line: 0, ch: 486 },
   ],
   obigen: [
@@ -307,7 +316,7 @@ const expectedFromTestFile = {
   Farbe: [
     { line: 0, ch: 506 },
     { line: 0, ch: 630 },
-    { line: 0, ch: 721 },
+    { line: 0, ch: 722 },
   ],
   Material: [{ line: 0, ch: 513 }],
   Absatzhöhe: [{ line: 0, ch: 523 }],
@@ -315,7 +324,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 534 },
     { line: 0, ch: 1851 },
   ],
-  Eigenschaften: [{ line: 0, ch: 539 }],
+  Eigenschaften: [{ line: 0, ch: 540 }],
   einer: [
     { line: 0, ch: 554 },
     { line: 0, ch: 1390 },
@@ -386,12 +395,12 @@ const expectedFromTestFile = {
   ],
   Unterkategorien: [{ line: 0, ch: 788 }],
   diskret: [
-    { line: 0, ch: 804 },
+    { line: 0, ch: 805 },
     { line: 0, ch: 1001 },
     { line: 0, ch: 1134 },
   ],
   stetig: [
-    { line: 0, ch: 818 },
+    { line: 0, ch: 819 },
     { line: 0, ch: 1147 },
     { line: 0, ch: 1266 },
   ],
@@ -446,7 +455,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 969 },
     { line: 0, ch: 2138 },
   ],
-  Zählvariablen: [{ line: 0, ch: 975 }],
+  Zählvariablen: [{ line: 0, ch: 976 }],
   stets: [{ line: 0, ch: 995 }],
   stetiges: [{ line: 0, ch: 1018 }],
   hingegen: [{ line: 0, ch: 1041 }],
@@ -458,7 +467,7 @@ const expectedFromTestFile = {
   ],
   Intervall: [
     { line: 0, ch: 1100 },
-    { line: 0, ch: 2030 },
+    { line: 0, ch: 2031 },
     { line: 0, ch: 2744 },
   ],
   bilden: [{ line: 0, ch: 1110 }],
@@ -527,7 +536,7 @@ const expectedFromTestFile = {
   ],
   Beste: [{ line: 0, ch: 1539 }],
   Bild: [
-    { line: 0, ch: 1554 },
+    { line: 0, ch: 1555 },
     { line: 0, ch: 1741 },
     { line: 0, ch: 2319 },
   ],
@@ -544,7 +553,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 2063 },
   ],
   fehlt: [{ line: 0, ch: 1689 }],
-  Wie: [{ line: 0, ch: 1695 }],
+  Wie: [{ line: 0, ch: 1696 }],
   soll: [{ line: 0, ch: 1700 }],
   ich: [{ line: 0, ch: 1705 }],
   ordnen: [{ line: 0, ch: 1713 }],
@@ -573,12 +582,12 @@ const expectedFromTestFile = {
     { line: 0, ch: 2199 },
   ],
   keine: [{ line: 0, ch: 1872 }],
-  sinnvollen: [{ line: 0, ch: 1878 }],
+  sinnvollen: [{ line: 0, ch: 1879 }],
   Abstände: [
     { line: 0, ch: 1891 },
     { line: 0, ch: 2079 },
   ],
-  zB: [{ line: 0, ch: 1901 }],
+  zB: [{ line: 0, ch: 1902 }],
   an: [
     { line: 0, ch: 1920 },
     { line: 0, ch: 1945 },
@@ -612,10 +621,10 @@ const expectedFromTestFile = {
   inhaltlicher: [{ line: 0, ch: 2209 }],
   Nullpunkt: [{ line: 0, ch: 2222 }],
   lucarrowright: [
-    { line: 0, ch: 2232 },
-    { line: 0, ch: 3108 },
-    { line: 0, ch: 3152 },
-    { line: 0, ch: 3196 },
+    { line: 0, ch: 2233 },
+    { line: 0, ch: 3109 },
+    { line: 0, ch: 3153 },
+    { line: 0, ch: 3197 },
   ],
   Einkommen: [
     { line: 0, ch: 2254 },
@@ -691,7 +700,7 @@ const expectedFromTestFile = {
   arithmetisches: [{ line: 0, ch: 3263 }],
   Bei: [{ line: 0, ch: 3292 }],
   grossen: [{ line: 0, ch: 3310 }],
-  Spikes: [{ line: 0, ch: 3318 }],
+  Spikes: [{ line: 0, ch: 3319 }],
   im: [
     { line: 0, ch: 3340 },
     { line: 0, ch: 3347 },
@@ -699,7 +708,7 @@ const expectedFromTestFile = {
   gut: [{ line: 0, ch: 3343 }],
   repräsentiert: [{ line: 0, ch: 3357 }],
   Lagemasse: [{ line: 0, ch: 3376 }],
-  Lage: [{ line: 0, ch: 3386 }],
+  Lage: [{ line: 0, ch: 3387 }],
   Daten: [
     { line: 0, ch: 3396 },
     { line: 0, ch: 4043 },
