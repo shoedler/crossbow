@@ -7,12 +7,10 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 export class CrossbowUtilsService {
-  constructor() {}
-
   // folders names (or paths, separated by "/"). (Whitepaces around commas will be trimmed)
   public toArrayOfPaths(pathArrayLike: string): string[] {
     return pathArrayLike

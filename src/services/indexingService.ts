@@ -7,7 +7,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 import { CacheItem, CachedMetadata, TAbstractFile, TFile, Vault } from 'obsidian';
@@ -15,6 +15,7 @@ import { CrossbowLoggingService } from './loggingService';
 import { CrossbowSettingsService } from './settingsService';
 
 type CacheEntryLookup = { [key: string]: CacheEntry };
+
 export type SourceCacheEntryLookupMap = { [key: TFile['path']]: CacheEntryLookup };
 
 export interface CacheEntry {
@@ -35,11 +36,6 @@ export class CrossbowIndexingService {
     private readonly settingsService: CrossbowSettingsService,
     private readonly loggingService: CrossbowLoggingService
   ) {}
-
-  private addOrUpdateCacheEntry(entry: CacheEntry, source: TFile): void {
-    this.crossbowCache[source.path] = this.crossbowCache[source.path] ? this.crossbowCache[source.path] : {};
-    this.crossbowCache[source.path][entry.text] = entry;
-  }
 
   public getCache(): SourceCacheEntryLookupMap {
     return this.crossbowCache;
@@ -104,5 +100,10 @@ export class CrossbowIndexingService {
 
   public clearCache(): void {
     this.crossbowCache = {};
+  }
+
+  private addOrUpdateCacheEntry(entry: CacheEntry, source: TFile): void {
+    this.crossbowCache[source.path] = this.crossbowCache[source.path] ? this.crossbowCache[source.path] : {};
+    this.crossbowCache[source.path][entry.text] = entry;
   }
 }

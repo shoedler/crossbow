@@ -7,11 +7,12 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 /* eslint-disable no-useless-escape */ // Reson: `testFile`
 
+import { writeFileSync } from 'fs';
 import { Editor } from 'obsidian';
 import { CrossbowTokenizationService, WordLookup } from './tokenizationService';
 
@@ -135,16 +136,24 @@ describe(CrossbowTokenizationService.constructor.name, () => {
       const editor = mockEditor(testFile);
       const service = new CrossbowTokenizationService();
       const actual = service.getWordLookupFromEditor(editor);
+
+      // Dump actual and expected to files for debugging
+      writeFileSync('src/services/tokenizationService.test.actual.dump.json', JSON.stringify(actual, null, 0));
+      writeFileSync(
+        'src/services/tokenizationService.test.expected.dump.json',
+        JSON.stringify(expectedFromTestFile, null, 0)
+      );
+
       expect(actual).toEqual(expectedFromTestFile);
     });
   });
 });
 
 const expectedFromTestFile = {
-  '0': [{ line: 0, ch: 2268 }],
+  '0': [{ line: 0, ch: 2269 }],
   '1': [
-    { line: 0, ch: 1827 },
-    { line: 0, ch: 3327 },
+    { line: 0, ch: 1828 },
+    { line: 0, ch: 3328 },
     { line: 0, ch: 4554 },
   ],
   '2': [{ line: 0, ch: 3779 }],
@@ -163,11 +172,11 @@ const expectedFromTestFile = {
   ],
   '9': [{ line: 0, ch: 3331 }],
   '51': [{ line: 0, ch: 1916 }],
-  '93': [{ line: 0, ch: 3784 }],
+  '93': [{ line: 0, ch: 3786 }],
   '185': [{ line: 0, ch: 3754 }],
   '1249': [{ line: 0, ch: 3041 }],
-  '1851': [{ line: 0, ch: 3769 }],
-  '12494': [{ line: 0, ch: 3063 }],
+  '1851': [{ line: 0, ch: 3770 }],
+  '12494': [{ line: 0, ch: 3066 }],
   '12589': [{ line: 0, ch: 3186 }],
   '34567': [{ line: 0, ch: 3142 }],
   '55555': [{ line: 0, ch: 3098 }],
@@ -192,7 +201,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 621 },
     { line: 0, ch: 1801 },
     { line: 0, ch: 2340 },
-    { line: 0, ch: 3021 },
+    { line: 0, ch: 3023 },
   ],
   Schuhe: [
     { line: 0, ch: 151 },
@@ -206,7 +215,7 @@ const expectedFromTestFile = {
   Kriterien: [{ line: 0, ch: 173 }],
   Man: [
     { line: 0, ch: 184 },
-    { line: 0, ch: 2103 },
+    { line: 0, ch: 2104 },
   ],
   hat: [
     { line: 0, ch: 188 },
@@ -216,7 +225,7 @@ const expectedFromTestFile = {
   zur: [{ line: 0, ch: 200 }],
   Auswahl: [{ line: 0, ch: 204 }],
   Objekte: [
-    { line: 0, ch: 217 },
+    { line: 0, ch: 219 },
     { line: 0, ch: 233 },
   ],
   Die: [
@@ -236,7 +245,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 1316 },
     { line: 0, ch: 1845 },
   ],
-  statistische: [{ line: 0, ch: 252 }],
+  statistische: [{ line: 0, ch: 254 }],
   bezeichnet: [{ line: 0, ch: 277 }],
   Grundgesamtheit: [{ line: 0, ch: 292 }],
   Menge: [
@@ -284,7 +293,7 @@ const expectedFromTestFile = {
   Frage: [{ line: 0, ch: 378 }],
   kommen: [{ line: 0, ch: 384 }],
   Im: [
-    { line: 0, ch: 392 },
+    { line: 0, ch: 393 },
     { line: 0, ch: 486 },
   ],
   obigen: [
@@ -307,7 +316,7 @@ const expectedFromTestFile = {
   Farbe: [
     { line: 0, ch: 506 },
     { line: 0, ch: 630 },
-    { line: 0, ch: 721 },
+    { line: 0, ch: 722 },
   ],
   Material: [{ line: 0, ch: 513 }],
   Absatzhöhe: [{ line: 0, ch: 523 }],
@@ -315,7 +324,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 534 },
     { line: 0, ch: 1851 },
   ],
-  Eigenschaften: [{ line: 0, ch: 539 }],
+  Eigenschaften: [{ line: 0, ch: 540 }],
   einer: [
     { line: 0, ch: 554 },
     { line: 0, ch: 1390 },
@@ -386,12 +395,12 @@ const expectedFromTestFile = {
   ],
   Unterkategorien: [{ line: 0, ch: 788 }],
   diskret: [
-    { line: 0, ch: 804 },
+    { line: 0, ch: 805 },
     { line: 0, ch: 1001 },
     { line: 0, ch: 1134 },
   ],
   stetig: [
-    { line: 0, ch: 818 },
+    { line: 0, ch: 819 },
     { line: 0, ch: 1147 },
     { line: 0, ch: 1266 },
   ],
@@ -400,7 +409,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 1012 },
     { line: 0, ch: 2250 },
   ],
-  diskretes: [{ line: 0, ch: 832 }],
+  diskretes: [{ line: 0, ch: 834 }],
   ist: [
     { line: 0, ch: 854 },
     { line: 0, ch: 1037 },
@@ -446,9 +455,9 @@ const expectedFromTestFile = {
     { line: 0, ch: 969 },
     { line: 0, ch: 2138 },
   ],
-  Zählvariablen: [{ line: 0, ch: 975 }],
+  Zählvariablen: [{ line: 0, ch: 976 }],
   stets: [{ line: 0, ch: 995 }],
-  stetiges: [{ line: 0, ch: 1016 }],
+  stetiges: [{ line: 0, ch: 1018 }],
   hingegen: [{ line: 0, ch: 1041 }],
   dadurch: [{ line: 0, ch: 1050 }],
   gekennzeichnet: [{ line: 0, ch: 1058 }],
@@ -458,7 +467,7 @@ const expectedFromTestFile = {
   ],
   Intervall: [
     { line: 0, ch: 1100 },
-    { line: 0, ch: 2030 },
+    { line: 0, ch: 2031 },
     { line: 0, ch: 2744 },
   ],
   bilden: [{ line: 0, ch: 1110 }],
@@ -527,7 +536,7 @@ const expectedFromTestFile = {
   ],
   Beste: [{ line: 0, ch: 1539 }],
   Bild: [
-    { line: 0, ch: 1554 },
+    { line: 0, ch: 1555 },
     { line: 0, ch: 1741 },
     { line: 0, ch: 2319 },
   ],
@@ -535,7 +544,7 @@ const expectedFromTestFile = {
   OG: [{ line: 0, ch: 1572 }],
   Wurzelskala: [{ line: 0, ch: 1583 }],
   Nominalskala: [
-    { line: 0, ch: 1603 },
+    { line: 0, ch: 1605 },
     { line: 0, ch: 1662 },
   ],
   Rangordnung: [
@@ -544,7 +553,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 2063 },
   ],
   fehlt: [{ line: 0, ch: 1689 }],
-  Wie: [{ line: 0, ch: 1695 }],
+  Wie: [{ line: 0, ch: 1696 }],
   soll: [{ line: 0, ch: 1700 }],
   ich: [{ line: 0, ch: 1705 }],
   ordnen: [{ line: 0, ch: 1713 }],
@@ -552,7 +561,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 1724 },
     { line: 0, ch: 1978 },
     { line: 0, ch: 2302 },
-    { line: 0, ch: 3808 },
+    { line: 0, ch: 3810 },
     { line: 0, ch: 4114 },
   ],
   Siehe: [
@@ -573,12 +582,12 @@ const expectedFromTestFile = {
     { line: 0, ch: 2199 },
   ],
   keine: [{ line: 0, ch: 1872 }],
-  sinnvollen: [{ line: 0, ch: 1878 }],
+  sinnvollen: [{ line: 0, ch: 1879 }],
   Abstände: [
     { line: 0, ch: 1891 },
     { line: 0, ch: 2079 },
   ],
-  zB: [{ line: 0, ch: 1901 }],
+  zB: [{ line: 0, ch: 1902 }],
   an: [
     { line: 0, ch: 1920 },
     { line: 0, ch: 1945 },
@@ -603,7 +612,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 2135 },
     { line: 0, ch: 4542 },
   ],
-  Abstand: [{ line: 0, ch: 2147 }],
+  Abstand: [{ line: 0, ch: 2149 }],
   zw: [{ line: 0, ch: 2159 }],
   zwei: [{ line: 0, ch: 2163 }],
   Punkten: [{ line: 0, ch: 2168 }],
@@ -612,10 +621,10 @@ const expectedFromTestFile = {
   inhaltlicher: [{ line: 0, ch: 2209 }],
   Nullpunkt: [{ line: 0, ch: 2222 }],
   lucarrowright: [
-    { line: 0, ch: 2232 },
-    { line: 0, ch: 3108 },
-    { line: 0, ch: 3152 },
-    { line: 0, ch: 3196 },
+    { line: 0, ch: 2233 },
+    { line: 0, ch: 3109 },
+    { line: 0, ch: 3153 },
+    { line: 0, ch: 3197 },
   ],
   Einkommen: [
     { line: 0, ch: 2254 },
@@ -672,7 +681,7 @@ const expectedFromTestFile = {
   ],
   D: [{ line: 0, ch: 3037 }],
   xquer0: [{ line: 0, ch: 3051 }],
-  Problem: [{ line: 0, ch: 3080 }],
+  Problem: [{ line: 0, ch: 3082 }],
   D1: [
     { line: 0, ch: 3093 },
     { line: 0, ch: 4210 },
@@ -691,7 +700,7 @@ const expectedFromTestFile = {
   arithmetisches: [{ line: 0, ch: 3263 }],
   Bei: [{ line: 0, ch: 3292 }],
   grossen: [{ line: 0, ch: 3310 }],
-  Spikes: [{ line: 0, ch: 3318 }],
+  Spikes: [{ line: 0, ch: 3319 }],
   im: [
     { line: 0, ch: 3340 },
     { line: 0, ch: 3347 },
@@ -699,7 +708,7 @@ const expectedFromTestFile = {
   gut: [{ line: 0, ch: 3343 }],
   repräsentiert: [{ line: 0, ch: 3357 }],
   Lagemasse: [{ line: 0, ch: 3376 }],
-  Lage: [{ line: 0, ch: 3386 }],
+  Lage: [{ line: 0, ch: 3387 }],
   Daten: [
     { line: 0, ch: 3396 },
     { line: 0, ch: 4043 },
@@ -716,7 +725,7 @@ const expectedFromTestFile = {
     { line: 0, ch: 3743 },
   ],
   Halbierung: [{ line: 0, ch: 3516 }],
-  Biespiel: [{ line: 0, ch: 3718 }],
+  Biespiel: [{ line: 0, ch: 3719 }],
   Berechne: [{ line: 0, ch: 3730 }],
   den: [{ line: 0, ch: 3739 }],
   Werten: [{ line: 0, ch: 3758 }],

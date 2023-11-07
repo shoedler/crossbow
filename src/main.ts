@@ -7,7 +7,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 import { App, CachedMetadata, MarkdownView, Plugin, PluginManifest, TAbstractFile, TFile } from 'obsidian';
@@ -20,7 +20,7 @@ import { CrossbowSuggestionsService } from './services/suggestionsService';
 import { CrossbowTokenizationService } from './services/tokenizationService';
 import { CrossbowUtilsService } from './services/utilsService';
 import { CrossbowSettingTab } from './settings';
-import { registerTreeItemElements } from './view/treeItem';
+import { registerTreeElements } from './view/tree/tree';
 import { CrossbowView } from './view/view';
 
 export default class CrossbowPlugin extends Plugin {
@@ -50,6 +50,7 @@ export default class CrossbowPlugin extends Plugin {
     this.viewController = new CrossbowViewController(this.settingsService);
   }
 
+  /** @implements {@link Plugin.onload} */
   public async onload(): Promise<void> {
     // Load settings
     const settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData()) as CrossbowPluginSettings;
@@ -57,7 +58,8 @@ export default class CrossbowPlugin extends Plugin {
 
     // Register view elements
     registerCrossbowIcons();
-    registerTreeItemElements();
+    registerTreeElements();
+
     this.registerView(CrossbowView.viewType, (leaf) => new CrossbowView(leaf, this.onManualRefreshButtonClick));
 
     // Ribbon icon to access the crossbow pane
@@ -82,11 +84,42 @@ export default class CrossbowPlugin extends Plugin {
     this.loggingService.debugLog('Crossbow is ready.');
   }
 
-  public onunload(): void {
+  public onunload() {
     this.viewController.unloadView();
     this.indexingService.clearCache();
 
     this.loggingService.debugLog('Unloaded Crossbow.');
+  }
+
+  public runWithCacheUpdate(fileHasChanged: boolean): void {
+    this.indexingService.indexVault(this.app.vault);
+    this.runWithoutCacheUpdate(fileHasChanged);
+  }
+
+  public runWithoutCacheUpdate(fileHasChanged: boolean): void {
+    // Get editor of current file
+    const fileView = app.workspace
+      .getLeavesOfType('markdown')
+      .find((leaf) => leaf.view instanceof MarkdownView && leaf.view.file === this.currentFile)?.view as
+      | MarkdownView
+      | undefined;
+
+    // #26 https://github.com/shoedler/crossbow/issues/26 - Don't know why we cannot set the mode programmatically.
+    // console.log('fileView mode', fileView?.getMode()); // 'preview' is 'Reading' mode, 'source' is 'Editing' mode (aka. livePreview)
+    // (fileView as any).setMode('source');
+
+    if (!fileView) return;
+
+    const targetEditor = fileView.editor;
+
+    if (!targetEditor) return;
+
+    const wordLookup = this.tokenizationService.getWordLookupFromEditor(targetEditor);
+    const suggestions = this.suggestionsService.getSuggestionsFromWordlookup(wordLookup, this.currentFile);
+
+    this.loggingService.debugLog(`Created ${suggestions.length} suggestions.`);
+
+    this.viewController.addOrUpdateSuggestions(suggestions, targetEditor, fileHasChanged);
   }
 
   private onMetadataChange = (file: TFile, data: string, cache: CachedMetadata): void => {
@@ -112,7 +145,7 @@ export default class CrossbowPlugin extends Plugin {
     this.loggingService.debugLog(`⚡File renamed. '${file.name}'`);
     this.indexingService.clearCacheFromFile(oldPath);
 
-    // TODO: Verify if we could just use: this.indexingService.indexFile(file as TFile);$
+    // TODO: Verify if we could just use: this.indexingService.indexFile(file as TFile);
     //       Could be problematic since file is TAbstractFile
     this.app.metadataCache.trigger('changed', file as TFile, ''); // Trigger metadata change to update cache
   };
@@ -123,7 +156,7 @@ export default class CrossbowPlugin extends Plugin {
     const prevCurrentFile = this.currentFile;
 
     this.setActiveFile();
-    this.loggingService.debugLog(`⚡File opened. '${this.currentFile?.basename}`);
+    this.loggingService.debugLog(`⚡File opened. '${this.currentFile?.name}'`);
 
     if (this.fileOpenTimeout) clearTimeout(this.fileOpenTimeout);
 
@@ -144,26 +177,9 @@ export default class CrossbowPlugin extends Plugin {
     this.runWithoutCacheUpdate(true);
   };
 
-  public runWithCacheUpdate(fileHasChanged: boolean): void {
-    this.indexingService.indexVault(this.app.vault);
-    this.runWithoutCacheUpdate(fileHasChanged);
-  }
-
-  public runWithoutCacheUpdate(fileHasChanged: boolean): void {
-    const targetEditor = this.app.workspace.activeEditor?.editor;
-    if (!targetEditor) return;
-
-    const wordLookup = this.tokenizationService.getWordLookupFromEditor(targetEditor);
-    const suggestions = this.suggestionsService.getSuggestionsFromWordlookup(wordLookup, this.currentFile);
-
-    this.loggingService.debugLog(`Created ${suggestions.length} suggestions.`);
-
-    this.viewController.addOrUpdateSuggestions(suggestions, targetEditor, fileHasChanged);
-  }
-
   private setActiveFile(): void {
     const leaf = this.app.workspace.getMostRecentLeaf();
-    if (leaf?.view instanceof MarkdownView) {
+    if (leaf?.view instanceof MarkdownView && leaf.view.file) {
       this.currentFile = leaf.view.file;
     } else CrossbowLoggingService.forceLog('warn', 'Unable to determine current editor.');
   }

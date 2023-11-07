@@ -7,7 +7,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 import { Editor, EditorPosition } from 'obsidian';
@@ -25,14 +25,13 @@ const MARKDOWN_LATEX_BLOCK_REGEX = /\$\$([^$]+)\$\$/g;
 const MARKDOWN_LATEX_INLINE_REGEX = /\$([^$]+)\$/g;
 const MARKDOWN_LINKS_AND_IMAGES_REGEX = /!?\[([^\]]+)\]\((?:<.*>)?\s*([^\s)]+)\s*\)/gm;
 const MARKDOWN_CODE_BLOCK_REGEX = /```[\s\S]+?```/g;
-// const MARKDOWN_ASTERISK_EMPHASIS_REGEX = /([\*]+)(\S)(.*?\S)??\1/g;
+const MARKDOWN_ASTERISK_EMPHASIS_REGEX = /([*]+)(\S)(.*?\S)??(\1)/g; // g1 = *, g2 = first char, g3 = middle, g4 = *
+
 // const MARKDOWN_LODASH_EMPHASIS_REGEX =   /(^|\W)([_]+)(\S)(.*?\S)??\2($|\W)/g;
 // const MARKDOWN_CODE_INLINE_REGEX =       /`(.+?)`/g;
 // const MARKDOWN_STRIKETROUGH_REGEX =      /~(.*?)~/g;
 
 export class CrossbowTokenizationService {
-  public constructor() {}
-
   private readonly SKIP_REGEX = /\s/;
 
   public getWordLookupFromEditor(targetEditor: Editor): WordLookup {
@@ -51,32 +50,38 @@ export class CrossbowTokenizationService {
 
         while (plainText[i] && !plainText[i].match(this.SKIP_REGEX)) word += plainText[i++];
 
-        word = CrossbowTokenizationService.cleanWord(word);
+        const cleanWord = CrossbowTokenizationService.cleanWord(word);
+        if (cleanWord.length <= 0) continue;
 
-        if (word.length <= 0) continue;
+        // Offset the word start pos if the 'cleaning' of the word removed characters
+        const wordStartOffset = word.indexOf(cleanWord[0]);
+        if (wordStartOffset > 0) pos.ch += wordStartOffset;
 
-        if (word in wordLookup) wordLookup[word].push(pos);
-        else wordLookup[word] = [pos];
+        if (cleanWord in wordLookup) wordLookup[cleanWord].push(pos);
+        else wordLookup[cleanWord] = [pos];
       }
     }
 
     return wordLookup;
   }
 
-  public static redactText(text: string): string {
-    const muteString = (str: string): string => str.replace(/[^\r\n]+/g, (m) => ' '.repeat(m.length));
+  public static muteString = (str: string): string => str.replace(/[^\r\n]+/g, (m) => ' '.repeat(m.length));
 
+  public static muteWord = (word: string): string => ' '.repeat(word.length);
+
+  public static redactText(text: string): string {
     // Order matters here
     return text
-      .replace(MARKDOWN_CODE_BLOCK_REGEX, (m) => muteString(m))
-      .replace(MARKDOWN_LATEX_BLOCK_REGEX, (m) => muteString(m))
-      .replace(MARKDOWN_LATEX_INLINE_REGEX, (m) => muteString(m))
-      .replace(MARKDOWN_LINKS_AND_IMAGES_REGEX, (m) => muteString(m))
-      .replace(OBSIDIAN_METADATA_REGEX, (m) => muteString(m))
-      .replace(OBSIDIAN_TAG_REGEX, (m) => muteString(m))
-      .replace(OBSIDIAN_LINKS_REGEX, (m) => muteString(m))
-      .replace(HTML_COMMENT_REGEX, (m) => muteString(m))
-      .replace(HTML_TAG_REGEX, (m) => muteString(m));
+      .replace(MARKDOWN_ASTERISK_EMPHASIS_REGEX, (m, g1, g2, g3) => this.muteWord(g1) + g2 + g3 + this.muteWord(g1))
+      .replace(MARKDOWN_CODE_BLOCK_REGEX, (m) => this.muteString(m))
+      .replace(MARKDOWN_LATEX_BLOCK_REGEX, (m) => this.muteString(m))
+      .replace(MARKDOWN_LATEX_INLINE_REGEX, (m) => this.muteString(m))
+      .replace(MARKDOWN_LINKS_AND_IMAGES_REGEX, (m) => this.muteString(m))
+      .replace(OBSIDIAN_METADATA_REGEX, (m) => this.muteString(m))
+      .replace(OBSIDIAN_TAG_REGEX, (m) => this.muteString(m))
+      .replace(OBSIDIAN_LINKS_REGEX, (m) => this.muteString(m))
+      .replace(HTML_COMMENT_REGEX, (m) => this.muteString(m))
+      .replace(HTML_TAG_REGEX, (m) => this.muteString(m));
   }
 
   public static cleanWord(word: string): string {
