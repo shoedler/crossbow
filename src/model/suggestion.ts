@@ -179,16 +179,28 @@ export class Match implements ITreeNodeData {
         icon: TreeItemButtonIcon.Search,
         callback(ev, ctx) {
           const leaf = app.workspace.getLeaf(true);
-          app.workspace.setActiveLeaf(leaf);
 
-          if (leaf.view instanceof MarkdownView) {
-            if (this.cacheMatch.item?.position) {
-              const { line, col } = this.cacheMatch.item.position.start;
-              leaf.view.editor.setCursor(line, col);
+          leaf.openFile(this.cacheMatch.file, { active: false }).then(() => {
+            if (leaf.view instanceof MarkdownView) {
+              app.workspace.setActiveLeaf(leaf);
+
+              if (this.cacheMatch.item?.position) {
+                const from = {
+                  ch: this.cacheMatch.item.position.start.col,
+                  line: this.cacheMatch.item.position.start.line + 1,
+                };
+                const to = {
+                  ch: this.cacheMatch.item.position.end.col,
+                  line: this.cacheMatch.item.position.end.line + 1,
+                };
+
+                leaf.view.editor.scrollIntoView({ from, to }, true);
+              }
+            } else {
+              CrossbowLoggingService.forceLog('warn', 'Could not go to source, not a markdown file');
+              leaf.detach();
             }
-          } else {
-            CrossbowLoggingService.forceLog('warn', 'Could not go to source, not a markdown file');
-          }
+          });
         },
       },
     ];

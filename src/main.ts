@@ -104,6 +104,10 @@ export default class CrossbowPlugin extends Plugin {
       | MarkdownView
       | undefined;
 
+    // #26 https://github.com/shoedler/crossbow/issues/26 - Don't know why we cannot set the mode programmatically.
+    // console.log('fileView mode', fileView?.getMode()); // 'preview' is 'Reading' mode, 'source' is 'Editing' mode (aka. livePreview)
+    // (fileView as any).setMode('source');
+
     if (!fileView) return;
 
     const targetEditor = fileView.editor;
@@ -175,7 +179,7 @@ export default class CrossbowPlugin extends Plugin {
 
   private setActiveFile(): void {
     const leaf = this.app.workspace.getMostRecentLeaf();
-    if (leaf?.view instanceof MarkdownView) {
+    if (leaf?.view instanceof MarkdownView && leaf.view.file) {
       this.currentFile = leaf.view.file;
     } else CrossbowLoggingService.forceLog('warn', 'Unable to determine current editor.');
   }
